@@ -61,6 +61,16 @@ if (isset($_POST['login'])) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Library Management | Login</title>
+    <base href="/library/">
+
+    <!-- Bootstrap CSS -->
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Your custom CSS -->
+    <link href="css/style.css" rel="stylesheet">
+
+    <!-- Bootstrap JS bundle -->
+    <script src="js/bootstrap.bundle.min.js"></script>
 
     <!-- ✅ Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
