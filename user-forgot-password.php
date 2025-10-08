@@ -54,12 +54,13 @@ body {
     justify-content: center;
 }
 .recover-card {
-    background: #fff;
-    border-radius: 15px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-    padding: 40px;
-    width: 100%;
-    max-width: 420px;
+background: #fff;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            padding: 40px;
+            width: 100%;
+            max-width: 420px;
+            text-align: center;
 }
 .recover-title {
     font-weight: 600;
@@ -87,8 +88,7 @@ a {
     margin-top: 15px;
 }
 .login-logo {
-            width: auto;
-            height: 90px;
+            width: 300px;
             object-fit: contain;
             margin-bottom: 15px;
         }

@@ -66,9 +66,12 @@ body {
 }
 .card-signup {
     background: #fff;
-    border-radius: 15px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-    padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            padding: 40px;
+            width: 100%;
+            max-width: 420px;
+            text-align: center;
 }
 .card-title {
     font-weight: 600;
@@ -99,10 +102,19 @@ body {
 }
 
 .login-logo {
-    width: auto;
-    height: 90px;
-    object-fit: contain;
-}
+            width: 300px;
+            object-fit: contain;
+            margin-bottom: 15px;
+        }
+        .login-card {
+            background: #fff;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            padding: 40px;
+            width: 100%;
+            max-width: 420px;
+            text-align: center;
+        }
 </style>
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
