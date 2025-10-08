@@ -23,6 +23,24 @@ if (isset($_POST['addAuthor'])) {
     exit;
 }
 
+// Handle Update Author
+if (isset($_POST['updateAuthor'])) {
+    $id = $_POST['athrid'];
+    $author = $_POST['author'];
+    $sql = "UPDATE tblauthors SET AuthorName=:author, UpdationDate=NOW() WHERE id=:id";
+    $query = $dbh->prepare($sql);
+    $query->bindParam(':author', $author, PDO::PARAM_STR);
+    $query->bindParam(':id', $id, PDO::PARAM_INT);
+
+    if ($query->execute()) {
+        $_SESSION['toast'] = ['msg' => 'Author updated successfully!', 'type' => 'success'];
+    } else {
+        $_SESSION['toast'] = ['msg' => 'Failed to update author!', 'type' => 'danger'];
+    }
+    header('location:manage-authors.php');
+    exit;
+}
+
 // Handle Delete
 if (isset($_GET['del'])) {
     $id = $_GET['del'];
@@ -180,6 +198,25 @@ body { background-color: #f8f9fa; }
     </div>
 </div>
 
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteAuthorModal" tabindex="-1" aria-labelledby="deleteAuthorModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title">Confirm Delete</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        Are you sure you want to delete this author?
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <a href="#" class="btn btn-danger" id="deleteConfirmBtn">Delete</a>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Toast -->
 <?php if($toast): ?>
 <div class="position-fixed bottom-0 end-0 p-3 toast-container">
@@ -215,11 +252,12 @@ $(document).ready(function() {
     });
 });
 
-// Delete confirmation
+// Delete modal
 function confirmDelete(id) {
-    if(confirm("Are you sure you want to delete this author?")) {
-        window.location.href = `manage-authors.php?del=${id}`;
-    }
+    var deleteBtn = document.getElementById('deleteConfirmBtn');
+    deleteBtn.href = `manage-authors.php?del=${id}`;
+    var deleteModal = new bootstrap.Modal(document.getElementById('deleteAuthorModal'));
+    deleteModal.show();
 }
 </script>
 </body>
