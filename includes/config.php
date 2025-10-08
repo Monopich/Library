@@ -1,7 +1,7 @@
 <?php
 
 // DB credentials.
-define('DB_HOST', 'localhost');
+define('DB_HOST', 'db');
 define('DB_USER', 'library_user');
 define('DB_PASS', 'Library123!');
 define('DB_NAME', 'library');
