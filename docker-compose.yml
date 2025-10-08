@@ -44,7 +44,7 @@ services:
 
 networks:
   rtc_net:
-    driver: bridge
+    external: true
 
 volumes:
   db_data:
