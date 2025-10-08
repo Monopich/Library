@@ -127,7 +127,7 @@ function checkAvailability() {
 
 <div class="card-signup">
     <div class="login-logo-container">
-        <img src="assets/img/logo.png" alt="Logo" class="login-logo">
+        <img src="assets/img/login-logo.png" alt="Logo" class="login-logo">
     </div>
     <h3 class="card-title">Student Signup</h3>
     <form name="signup" method="post">

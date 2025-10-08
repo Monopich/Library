@@ -97,7 +97,7 @@ a {
 <body>
 
 <div class="recover-card">
-    <img src="assets/img/logo.png" alt="Library Logo" class="login-logo">
+    <img src="assets/img/login-logo.png" alt="Library Logo" class="login-logo">
     <h3 class="recover-title">Password Recovery</h3>
 
     <form method="post">
