@@ -1,0 +1,92 @@
+# =========================
+# PHP / Laravel / Generic
+# =========================
+
+# Composer dependencies
+/vendor/
+composer.lock
+
+# Node dependencies (if using frontend tools like Bootstrap or Vue)
+node_modules/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Cache and logs
+/storage/
+bootstrap/cache/
+*.log
+*.cache
+*.tmp
+
+# IDE and editor files
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# System files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# OS generated files
+ehthumbs.db
+Icon?
+__MACOSX/
+
+# PHPStorm / JetBrains
+*.iml
+/.idea/
+
+# Backup or temp files
+*.bak
+*.swp
+*.old
+*.orig
+*.tmp
+*.temp
+
+# Uploaded files (user uploads, photos, etc.)
+/uploads/
+/images/uploads/
+/public/uploads/
+/public/images/uploads/
+
+# Local configuration files
+config.php
+includes/config.php
+
+# Security-sensitive files
+*.sql
+*.sqlite
+*.db
+
+# Cache folders
+/tmp/
+cache/
+session/
+
+# =========================
+# Optional extras
+# =========================
+
+# If using VSCode PHP extensions
+.phpunit.result.cache
+
+# If using build tools (Webpack, etc.)
+/dist/
+/build/
+/public/js/
+/public/css/
+
+# If using Nginx/Apache logs
+/logs/
+*.log
+
+# Ignore backup zip or tar files
+*.zip
+*.tar.gz
+*.rar
