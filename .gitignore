@@ -58,6 +58,7 @@ __MACOSX/
 # Local configuration files
 config.php
 includes/config.php
+admin/includes/config.php
 
 # Security-sensitive files
 *.sql
@@ -90,3 +91,9 @@ session/
 *.zip
 *.tar.gz
 *.rar
+
+# Ignore Docker and YAML files
+Dockerfile
+docker-compose.yml
+*.yaml
+*.yml

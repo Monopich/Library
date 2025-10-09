@@ -101,19 +101,19 @@ a {
     <h3 class="recover-title">Password Recovery</h3>
 
     <form method="post">
-        <div class="mb-1">
+        <div class="mb-1 text-start">
             <label class="form-label">Email</label>
             <input type="email" class="form-control" name="email" required autocomplete="off">
         </div>
-        <div class="mb-1">
+        <div class="mb-1 text-start">
             <label class="form-label">Mobile Number</label>
             <input type="text" class="form-control" name="mobile" required autocomplete="off">
         </div>
-        <div class="mb-1">
+        <div class="mb-1 text-start">
             <label class="form-label">New Password</label>
             <input type="password" class="form-control" name="newpassword" required autocomplete="off">
         </div>
-        <div class="mb-1">
+        <div class="mb-1 text-start">
             <label class="form-label">Confirm Password</label>
             <input type="password" class="form-control" name="confirmpassword" required autocomplete="off">
         </div>
