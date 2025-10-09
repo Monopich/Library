@@ -219,7 +219,7 @@ body { background-color: #f8f9fa; }
 
 <!-- Toast -->
 <?php if($toast): ?>
-<div class="position-fixed bottom-0 end-0 p-3 toast-container">
+<div class="position-fixed top-0 end-0 p-3 toast-container">
     <div id="liveToast" class="toast align-items-center text-bg-<?php echo $toast['type']; ?> border-0" role="alert" aria-live="assertive" aria-atomic="true">
         <div class="d-flex">
             <div class="toast-body"><?php echo htmlentities($toast['msg']); ?></div>

@@ -141,7 +141,7 @@ if ($query->rowCount() > 0) {
 </div>
 
 <!-- Toast -->
-<div class="position-fixed bottom-0 end-0 p-3 toast-container">
+<div class="position-fixed top-0 end-0 p-3 toast-container">
 <?php if($toast): ?>
     <div id="liveToast" class="toast align-items-center text-bg-<?= $toast['type'] ?> border-0" role="alert">
         <div class="d-flex">
