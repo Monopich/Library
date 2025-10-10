@@ -27,6 +27,9 @@
                     <a class="nav-link text-primary fw-medium px-3 py-2 rounded hover-bg" href="manage-books.php">Books</a>
                 </li>
                 <li class="nav-item mx-1">
+                    <a class="nav-link text-primary fw-medium px-3 py-2 rounded hover-bg" href="manage-ebooks.php">EBooks</a>
+                </li>
+                <li class="nav-item mx-1">
                     <a class="nav-link text-primary fw-medium px-3 py-2 rounded hover-bg" href="manage-issued-books.php">Issued Books</a>
                 </li>
                 <li class="nav-item mx-1">
@@ -50,7 +53,7 @@
     transition: 0.3s;
 }
 
-/* Active link style (optional) */
+/* Active link style */
 .nav-link.active {
     background-color: rgba(0, 123, 255, 0.2);
     border-radius: 0.25rem;

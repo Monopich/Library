@@ -43,7 +43,22 @@ $uid  = $_SESSION['stdid'] ?? $_SESSION['loginid'] ?? 0;
                     <div class="alert alert-success text-center py-4 rounded-3">
                         <i class="fa-solid fa-book fa-3x mb-2"></i>
                         <?php
-                        $sql = "SELECT COUNT(id) as total FROM tblbooks";
+                        $sql = "SELECT COUNT(id) as total FROM tblbooks WHERE bookQty > 0";
+                        $query = $dbh->prepare($sql);
+                        $query->execute();
+                        $totalBooks = $query->fetch(PDO::FETCH_OBJ)->total;
+                        ?>
+                        <h3><?php echo htmlentities($totalBooks); ?></h3>
+                        Books Listed
+                    </div>
+                </a>
+
+                <!-- Total Books -->
+                <a href="ebooks.php" class="col-md-4 col-sm-6 text-decoration-none">
+                    <div class="alert alert-danger text-center py-4 rounded-3">
+                        <i class="fa-solid fa-book fa-3x mb-2"></i>
+                        <?php
+                        $sql = "SELECT COUNT(id) as total FROM tblbooks WHERE BookFile != ''";
                         $query = $dbh->prepare($sql);
                         $query->execute();
                         $totalBooks = $query->fetch(PDO::FETCH_OBJ)->total;

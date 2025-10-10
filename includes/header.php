@@ -21,15 +21,24 @@ session_start();
                     <li class="nav-item mx-1">
                         <a class="nav-link text-primary fw-medium px-3 py-2 rounded hover-bg <?php echo basename($_SERVER['PHP_SELF']) == 'dashboard.php' ? 'active' : ''; ?>" href="dashboard.php">Dashboard</a>
                     </li>
+
                     <li class="nav-item mx-1">
                         <a class="nav-link text-primary fw-medium px-3 py-2 rounded hover-bg <?php echo basename($_SERVER['PHP_SELF']) == 'issued-books.php' ? 'active' : ''; ?>" href="issued-books.php">Issued Books</a>
                     </li>
+
+                    <!-- ✅ New E-Books link -->
+                    <li class="nav-item mx-1">
+                        <a class="nav-link text-primary fw-medium px-3 py-2 rounded hover-bg <?php echo basename($_SERVER['PHP_SELF']) == 'ebooks.php' ? 'active' : ''; ?>" href="ebooks.php">E-Books</a>
+                    </li>
+
                     <li class="nav-item mx-1">
                         <a class="nav-link text-primary fw-medium px-3 py-2 rounded hover-bg <?php echo basename($_SERVER['PHP_SELF']) == 'my-profile.php' ? 'active' : ''; ?>" href="my-profile.php">My Profile</a>
                     </li>
+
                     <li class="nav-item mx-1">
-                        <a class="nav-link text-primary fw-medium px-3 py-2 rounded hover-bg <?php echo basename($_SERVER['PHP_SELF']) == 'change-password.php' ? 'active' : ''; ?>" href="change-password.php">Issued Books</a>
-                    </li> 
+                        <a class="nav-link text-primary fw-medium px-3 py-2 rounded hover-bg <?php echo basename($_SERVER['PHP_SELF']) == 'change-password.php' ? 'active' : ''; ?>" href="change-password.php">Change Password</a>
+                    </li>
+
                     <li class="nav-item mx-1">
                         <a class="btn btn-danger fw-bold px-4" href="logout.php">Log Out</a>
                     </li>
