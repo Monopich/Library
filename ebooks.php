@@ -13,7 +13,7 @@ if (strlen($_SESSION['login']) == 0) {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Issued Books | Online Library Management System</title>
+<title>E-Books | Online Library Management System</title>
 
 <!-- Bootstrap 5 -->
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -26,7 +26,7 @@ body {
 }
 
 /* Card Styling */
-.card-book {
+.card-ebook {
     border-radius: 15px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.1);
     transition: transform 0.2s, box-shadow 0.2s;
@@ -34,7 +34,7 @@ body {
     flex-direction: column;
     height: 100%;
 }
-.card-book:hover {
+.card-ebook:hover {
     transform: translateY(-5px);
     box-shadow: 0 10px 20px rgba(0,0,0,0.15);
 }
@@ -61,9 +61,10 @@ body {
     font-weight: 600;
     min-height: 45px;
 }
-.badge-available {
-    font-size: 0.85rem;
-    padding: 5px 10px;
+
+/* Button style */
+.btn-view, .btn-download {
+    font-size: 0.9rem;
 }
 
 /* Search box */
@@ -82,38 +83,31 @@ body {
 <div class="content-wrapper">
     <div class="container py-3">
         <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
-            <h4 class="text-primary fw-bold mb-0">Issued Books</h4>
-            <input type="text" id="searchInput" class="form-control" placeholder="🔍 Search by title, author, category, or ISBN">
+            <h4 class="text-primary fw-bold mb-0">Available E-Books</h4>
+            <input type="text" id="searchInput" class="form-control" placeholder="🔍 Search by title, author, or category">
         </div>
 
-        <div class="row g-4" id="bookList">
+        <div class="row g-4" id="ebookList">
             <?php 
-            $sql = "SELECT tblbooks.BookName, tblcategory.CategoryName, tblauthors.AuthorName,
-                           tblbooks.ISBNNumber, tblbooks.BookPrice, tblbooks.id as bookid, tblbooks.bookImage,
-                           tblbooks.isIssued, tblbooks.bookQty,
-                           COUNT(tblissuedbookdetails.id) AS issuedBooks,
-                           COUNT(tblissuedbookdetails.RetrunStatus) AS returnedbook
+            // Fetch only eBooks (those with BookPdf file)
+            $sql = "SELECT tblbooks.id, tblbooks.BookName, tblbooks.BookFile, tblbooks.bookImage, 
+                           tblauthors.AuthorName, tblcategory.CategoryName
                     FROM tblbooks
-                    LEFT JOIN tblissuedbookdetails ON tblissuedbookdetails.BookId = tblbooks.id
                     LEFT JOIN tblauthors ON tblauthors.id = tblbooks.AuthorId
                     LEFT JOIN tblcategory ON tblcategory.id = tblbooks.CatId
-                    WHERE tblbooks.bookQty > 0 AND (tblbooks.BookFile IS NULL OR tblbooks.BookFile = '')
-                    GROUP BY tblbooks.id";
+                    WHERE tblbooks.BookFile IS NOT NULL AND tblbooks.BookFile != ''";
+
             $query = $dbh->prepare($sql);
             $query->execute();
             $results = $query->fetchAll(PDO::FETCH_OBJ);
 
             if ($query->rowCount() > 0) {
                 foreach ($results as $result) {
-                    $availableQty = $result->bookQty;
-                    if ($result->issuedBooks > 0) {
-                        $availableQty -= ($result->issuedBooks - $result->returnedbook);
-                    }
             ?>
-            <div class="col-lg-4 col-md-6 col-sm-12 book-item">
-                <div class="card card-book">
+            <div class="col-lg-4 col-md-6 col-sm-12 ebook-item">
+                <div class="card card-ebook">
                     <div class="card-img-container">
-                        <img src="admin/bookimg/<?php echo htmlentities($result->bookImage); ?>" 
+                        <img src="admin/bookimg/<?php echo htmlentities($result->bookImage ?: 'default-book.png'); ?>" 
                              class="card-img-top" 
                              alt="<?php echo htmlentities($result->BookName); ?>">
                     </div>
@@ -122,17 +116,15 @@ body {
                             <?php echo htmlentities($result->BookName); ?>
                         </h5>
                         <p class="mb-1"><strong>Author:</strong> <?php echo htmlentities($result->AuthorName); ?></p>
-                        <p class="mb-1"><strong>Category:</strong> <?php echo htmlentities($result->CategoryName); ?></p>
-                        <p class="mb-1"><strong>ISBN:</strong> <?php echo htmlentities($result->ISBNNumber); ?></p>
-                        <p class="mb-1"><strong>Total:</strong> <?php echo htmlentities($result->bookQty); ?></p>
-                        <p class="mb-0">
-                            <strong>Available:</strong>
-                            <?php if($availableQty > 0) { ?>
-                                <span class="badge bg-success badge-available"><?php echo $availableQty; ?></span>
-                            <?php } else { ?>
-                                <span class="badge bg-danger badge-available">0</span>
-                            <?php } ?>
-                        </p>
+                        <p class="mb-2"><strong>Category:</strong> <?php echo htmlentities($result->CategoryName); ?></p>
+                        <div class="d-flex justify-content-center gap-2">
+                            <a href="admin/assets/pdf/<?php echo htmlentities($result->BookFile); ?>" target="_blank" class="btn btn-primary btn-view px-3">
+                                <i class="fa fa-eye me-1"></i> View
+                            </a>
+                            <a href="admin/assets/pdf/<?php echo htmlentities($result->BookFile); ?>" download class="btn btn-success btn-download px-3">
+                                <i class="fa fa-download me-1"></i> Download
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -141,7 +133,7 @@ body {
             } else { 
             ?>
                 <div class="col-12">
-                    <div class="alert alert-info text-center">No books found.</div>
+                    <div class="alert alert-info text-center">No e-books found.</div>
                 </div>
             <?php } ?>
         </div>
@@ -154,12 +146,11 @@ body {
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
-// 🔍 Live Search Filter (includes ISBN)
+// 🔍 Live Search Filter
 $(document).ready(function() {
     $('#searchInput').on('keyup', function() {
         var value = $(this).val().toLowerCase();
-        $('#bookList .book-item').filter(function() {
-            // Search text includes Book Name, Author, Category, and ISBN
+        $('#ebookList .ebook-item').filter(function() {
             $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1);
         });
     });

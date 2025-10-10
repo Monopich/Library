@@ -40,13 +40,28 @@ if (strlen($_SESSION['alogin']) == 0) {
                     <div class="alert alert-success text-center py-4 rounded-3">
                         <i class="fa-solid fa-book fa-3x mb-2"></i>
                         <?php
-                        $sql = "SELECT id FROM tblbooks";
+                        $sql = "SELECT id FROM tblbooks WHERE bookQty > 0 ";
                         $query = $dbh->prepare($sql);
                         $query->execute();
                         $listdbooks = $query->rowCount();
                         ?>
                         <h3><?php echo htmlentities($listdbooks); ?></h3>
                         Books Listed
+                    </div>
+                </a>
+
+                <!-- Books Listed -->
+                <a href="manage-ebooks.php" class="col-md-3 col-sm-6 text-decoration-none">
+                    <div class="alert alert-info text-center py-4 rounded-3">
+                        <i class="fa-solid fa-book fa-3x mb-2"></i>
+                        <?php
+                        $sql = "SELECT id FROM tblbooks WHERE BookFile != ''";
+                        $query = $dbh->prepare($sql);
+                        $query->execute();
+                        $listdbooks = $query->rowCount();
+                        ?>
+                        <h3><?php echo htmlentities($listdbooks); ?></h3>
+                        EBooks Listed
                     </div>
                 </a>
 
@@ -94,9 +109,7 @@ if (strlen($_SESSION['alogin']) == 0) {
                         Authors Listed
                     </div>
                 </a>
-            </div>
 
-            <div class="row g-3 mt-3">
                 <!-- Categories Listed -->
                 <a href="manage-categories.php" class="col-md-3 col-sm-6 text-decoration-none">
                     <div class="alert alert-info text-center py-4 rounded-3">
