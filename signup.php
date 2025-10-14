@@ -1,12 +1,10 @@
 <?php
 session_start();
 include('includes/config.php');
-error_reporting(0);
+error_reporting(E_ALL);
 
 if (isset($_POST['signup'])) {
-
-    // Generate student ID safely using database auto-increment if possible
-    // fallback to text file
+    // Generate Student ID using a text file (or ideally database auto-increment)
     $count_my_page = "studentid.txt";
     if (!file_exists($count_my_page)) file_put_contents($count_my_page, "1000"); // initial ID
     $hits = file($count_my_page);
@@ -14,9 +12,9 @@ if (isset($_POST['signup'])) {
     file_put_contents($count_my_page, $hits[0]);
     $StudentId = $hits[0];
 
-    $fname = $_POST['fullname'];
-    $mobileno = $_POST['mobileno'];
-    $email = $_POST['email'];
+    $fname = trim($_POST['fullname']);
+    $mobileno = trim($_POST['mobileno']);
+    $email = trim($_POST['email']);
     $password = $_POST['password'];
     $confirmpassword = $_POST['confirmpassword'];
     $status = 1;
@@ -24,7 +22,7 @@ if (isset($_POST['signup'])) {
     if ($password !== $confirmpassword) {
         $_SESSION['toast'] = ['type' => 'warning', 'message' => 'Password and Confirm Password do not match!'];
     } else {
-        $hashedPassword = password_hash($password, PASSWORD_BCRYPT); // safer than md5
+        $hashedPassword = password_hash($password, PASSWORD_BCRYPT);
         $sql = "INSERT INTO tblstudents(StudentId, FullName, MobileNumber, EmailId, Password, Status) 
                 VALUES(:StudentId, :fname, :mobileno, :email, :password, :status)";
         $query = $dbh->prepare($sql);
@@ -52,16 +50,59 @@ if (isset($_POST['signup'])) {
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Library Management | Signup</title>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
 <style>
-body { background: linear-gradient(135deg, #4e73df, #224abe); min-height: 100vh; display: flex; align-items: center; justify-content: center; }
-.card-signup { background: #fff; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); padding: 40px; width: 100%; max-width: 420px; text-align: center; }
-.card-title { font-weight: 600; margin-bottom: 25px; color: #224abe; }
-.form-control { border-radius: 10px; }
-.btn-success { width: 100%; border-radius: 10px; background: #28a745; border: none; }
+body {
+    background: #f0f2f5;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Segoe UI', sans-serif;
+}
+.card-signup {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    padding: 40px 30px;
+    width: 100%;
+    max-width: 420px;
+    text-align: center;
+}
+.card-title {
+    font-weight: 600;
+    color: #1a3d7c;
+    margin-bottom: 25px;
+}
+.input-group {
+    position: relative;
+}
+.input-group .form-control {
+    border-radius: 8px !important;
+    padding-right: 40px;
+}
+.input-group .toggle-password {
+    position: absolute;
+    top: 50%;
+    right: 10px;
+    transform: translateY(-50%);
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-size: 1.1rem;
+    color: #6c757d;
+    padding: 0;
+    margin: 0;
+}
+.btn-success {
+    width: 100%;
+    border-radius: 8px;
+    padding: 10px;
+    font-weight: 500;
+}
 .btn-success:hover { background: #218838; }
-.small-link { text-align: center; margin-top: 10px; }
-.login-logo-container { display: flex; justify-content: center; margin-bottom: 15px; }
-.login-logo { width: 300px; object-fit: contain; margin-bottom: 15px; }
+.small-link { font-size: 0.875rem; margin-top: 10px; display: block; }
+.login-logo { width: 150px; margin-bottom: 20px; }
 </style>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
@@ -82,9 +123,7 @@ function checkAvailability() {
 <body>
 
 <div class="card-signup">
-    <div class="login-logo-container">
-        <img src="assets/img/login-logo.png" alt="Logo" class="login-logo">
-    </div>
+    <img src="assets/img/login-logo.png" alt="Library Logo" class="login-logo">
     <h3 class="card-title">Student Signup</h3>
     <form name="signup" method="post">
         <div class="mb-1 text-start">
@@ -101,12 +140,18 @@ function checkAvailability() {
             <span id="user-availability-status" style="font-size:12px;"></span>
         </div>
         <div class="mb-1 text-start">
-            <label for="password" class="form-label">Password</label>
-            <input class="form-control" type="password" name="password" id="password" autocomplete="off" required>
+            <label class="form-label">Password</label>
+            <div class="input-group">
+                <input class="form-control" type="password" name="password" id="password" autocomplete="off" required>
+                <button type="button" class="toggle-password" data-target="password"><i class="bi bi-eye"></i></button>
+            </div>
         </div>
         <div class="mb-1 text-start">
-            <label for="confirmpassword" class="form-label">Confirm Password</label>
-            <input class="form-control" type="password" name="confirmpassword" id="confirmpassword" autocomplete="off" required>
+            <label class="form-label">Confirm Password</label>
+            <div class="input-group">
+                <input class="form-control" type="password" name="confirmpassword" id="confirmpassword" autocomplete="off" required>
+                <button type="button" class="toggle-password" data-target="confirmpassword"><i class="bi bi-eye"></i></button>
+            </div>
         </div>
         <button type="submit" name="signup" class="btn btn-success mt-3">Register Now</button>
         <div class="small-link mt-3">
@@ -126,20 +171,20 @@ function checkAvailability() {
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-
+<script>
+// Show toast
 <?php
 if (isset($_SESSION['toast'])) {
     $toast = $_SESSION['toast'];
-    $bg = match ($toast['type']) {
-        'success' => 'bg-success',
-        'danger' => 'bg-danger',
-        'warning' => 'bg-warning text-dark',
-        'info' => 'bg-info text-dark',
-        default => 'bg-secondary',
+    $bg = match($toast['type']) {
+        'success'=>'bg-success',
+        'danger'=>'bg-danger',
+        'warning'=>'bg-warning text-dark',
+        'info'=>'bg-info text-dark',
+        default=>'bg-secondary',
     };
     $redirect = $_SESSION['redirect'] ?? '';
     echo "
-    <script>
     document.addEventListener('DOMContentLoaded', () => {
         const toastEl = document.getElementById('liveToast');
         const toastBody = document.getElementById('toast-message');
@@ -148,10 +193,26 @@ if (isset($_SESSION['toast'])) {
         const toast = new bootstrap.Toast(toastEl);
         toast.show();
         " . ($redirect ? "setTimeout(() => { window.location.href = '{$redirect}'; }, 2000);" : "") . "
-    });
-    </script>";
+    });";
     unset($_SESSION['toast'], $_SESSION['redirect']);
 }
 ?>
+
+// Toggle password visibility
+document.querySelectorAll('.toggle-password').forEach(button => {
+    button.addEventListener('click', function(){
+        const target = document.getElementById(this.dataset.target);
+        const icon = this.querySelector('i');
+        if(target.type === 'password'){
+            target.type = 'text';
+            icon.classList.remove('bi-eye');
+            icon.classList.add('bi-eye-slash');
+        } else {
+            target.type = 'password';
+            icon.classList.remove('bi-eye-slash');
+            icon.classList.add('bi-eye');
+        }
+    });
+});
+</script>
 </body>
-</html>
