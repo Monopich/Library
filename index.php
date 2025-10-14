@@ -45,74 +45,69 @@ if (isset($_POST['login'])) {
     }
 
     $result = json_decode($response, true);
-    file_put_contents('api_debug.log', "Login response:\n" . print_r($result, true));
+    @file_put_contents(__DIR__.'/api_debug.log', "Login response:\n" . print_r($result, true), FILE_APPEND);
 
-    // Extract token
     $token = $result['token'] ?? $result['access_token'] ?? ($result['data']['token'] ?? null);
 
     if ($statusCode === 200 && $token) {
-        // Fetch user details
-        $userDetailUrl = "https://api.rtc-bb.camai.kh/api/auth/get_detail_user";
+        $detailEndpoints = [
+            "https://api.rtc-bb.camai.kh/api/auth/get_detail_user",
+            "https://api.rtc-bb.camai.kh/api/auth/me",
+            "https://api.rtc-bb.camai.kh/api/user/me"
+        ];
 
-        $ch = curl_init($userDetailUrl);
-        curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_HTTPHEADER => [
-                'Authorization: Bearer ' . $token,
-                'Accept: application/json'
-            ],
-            CURLOPT_SSL_VERIFYPEER => false
-        ]);
-        $userResponse = curl_exec($ch);
-        $detailStatus = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
+        $user = null;
+        foreach ($detailEndpoints as $url) {
+            $ch = curl_init($url);
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_HTTPHEADER => [
+                    'Authorization: Bearer ' . $token,
+                    'Accept: application/json'
+                ],
+                CURLOPT_SSL_VERIFYPEER => false
+            ]);
+            $userResponse = curl_exec($ch);
+            $detailStatus = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
 
-        $userData = json_decode($userResponse, true);
-        file_put_contents('api_debug.log', "User detail response:\n" . print_r($userData, true), FILE_APPEND);
+            $userData = json_decode($userResponse, true);
+            @file_put_contents(__DIR__.'/api_debug.log', "User response from $url:\n" . print_r($userData, true), FILE_APPEND);
 
-        if ($detailStatus === 200 && !empty($userData['user'])) {
-            $user = $userData['user'];
-            $detail = $user['user_detail'] ?? [];
-
-            // ✅ Map external data to local fields
-            if ($user) {
-                $studentId = $user['user_detail']['id_card'] ?? null;
-                $fullName = $user['user_detail']['latin_name'] ?? ($user['name'] ?? 'Unknown');
-                $mobile = $user['user_detail']['phone_number'] ?? '';
-                $emailId = $user['email'] ?? $email;
-
-                // Initialize $checkUser
-                $checkUser = $dbh->prepare("SELECT StudentId FROM tblstudents WHERE EmailId = :email");
-                $checkUser->bindParam(':email', $emailId);
-                $checkUser->execute();
-
-                if ($checkUser->rowCount() > 0) {
-                    // Update existing user
-                    $updateUser = $dbh->prepare("
-                        UPDATE tblstudents 
-                        SET FullName = :name, MobileNumber = :mobile, StudentId = :id, Status = 1 
-                        WHERE EmailId = :email
-                    ");
-                    $updateUser->bindParam(':name', $fullName);
-                    $updateUser->bindParam(':mobile', $mobile);
-                    $updateUser->bindParam(':id', $studentId);
-                    $updateUser->bindParam(':email', $emailId);
-                    $updateUser->execute();
-                } else {
-                    // Insert new user
-                    $insertUser = $dbh->prepare("
-                        INSERT INTO tblstudents (StudentId, FullName, EmailId, MobileNumber, Password, Status)
-                        VALUES (:id, :name, :email, :mobile, :password, 1)
-                    ");
-                    $insertUser->bindParam(':id', $studentId);
-                    $insertUser->bindParam(':name', $fullName);
-                    $insertUser->bindParam(':email', $emailId);
-                    $insertUser->bindParam(':mobile', $mobile);
-                    $insertUser->bindValue(':password', md5($password));
-                    $insertUser->execute();
-                }
+            if ($detailStatus === 200 && !empty($userData)) {
+                $user = $userData['data'] ?? $userData['user'] ?? null;
+                break;
             }
+        }
 
+        if ($user) {
+            $studentId = $user['user_detail']['id_card'] ?? null;
+            $fullName = $user['user_detail']['latin_name'] ?? ($user['first_name'] ?? 'Unknown');
+            $phoneNumber = $user['user_detail']['phone_number'] ?? '';
+            $emailId = $user['email'] ?? $email;
+
+            $checkUser = $dbh->prepare("SELECT StudentId FROM tblstudents WHERE EmailId = :email");
+            $checkUser->bindParam(':email', $emailId);
+            $checkUser->execute();
+
+            if ($checkUser->rowCount() > 0) {
+                $updateUser = $dbh->prepare("UPDATE tblstudents SET FullName = :name, MobileNumber = :mobile, Status = 1 WHERE EmailId = :email");
+                $updateUser->bindParam(':name', $fullName);
+                $updateUser->bindParam(':mobile', $phoneNumber);
+                $updateUser->bindParam(':email', $emailId);
+                $updateUser->execute();
+            } else {
+                $insertUser = $dbh->prepare("
+                    INSERT INTO tblstudents (StudentId, FullName, EmailId, MobileNumber, Password, Status)
+                    VALUES (:id, :name, :email, :mobile, :password, 1)
+                ");
+                $insertUser->bindParam(':id', $studentId);
+                $insertUser->bindParam(':name', $fullName);
+                $insertUser->bindParam(':email', $emailId);
+                $insertUser->bindParam(':mobile', $phoneNumber);
+                $insertUser->bindValue(':password', md5($password));
+                $insertUser->execute();
+            }
 
             $_SESSION['stdid'] = $studentId;
             $_SESSION['login'] = $emailId;
@@ -134,58 +129,70 @@ if (isset($_POST['login'])) {
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Library Management | Login</title>
-    <base href="/library/">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        body {
-            background: linear-gradient(135deg, #4e73df, #224abe);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .login-card {
-            background: #fff;
-            border-radius: 15px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-            padding: 40px;
-            width: 100%;
-            max-width: 420px;
-            text-align: center;
-        }
-        .login-logo {
-            width: 300px;
-            object-fit: contain;
-            margin-bottom: 15px;
-        }
-        .login-title {
-            font-weight: 600;
-            margin-bottom: 25px;
-            color: #224abe;
-        }
-        .form-control {
-            border-radius: 10px;
-        }
-        .btn-primary {
-            width: 100%;
-            border-radius: 10px;
-            background: #4e73df;
-            border: none;
-        }
-        .btn-primary:hover {
-            background: #3752c4;
-        }
-        .small-link {
-            text-align: center;
-            margin-top: 15px;
-        }
-        a {
-            text-decoration: none;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Library Management | Login</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+<style>
+body {
+    background: #f0f2f5;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-family: 'Segoe UI', sans-serif;
+}
+.login-card {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    padding: 35px 30px;
+    width: 100%;
+    max-width: 400px;
+    text-align: center;
+}
+.login-logo {
+    width: 150px;
+    margin-bottom: 20px;
+}
+.login-title {
+    font-weight: 600;
+    margin-bottom: 25px;
+    color: #1a3d7c;
+}
+.input-group {
+    position: relative;
+}
+
+.input-group .form-control {
+    border-radius: 8px !important; /* Fully rounded */
+    padding-right: 40px; /* Space for the eye icon */
+}
+
+.input-group .toggle-password {
+    position: absolute;
+    top: 50%;
+    right: 10px;
+    transform: translateY(-50%);
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-size: 1.1rem;
+    color: #6c757d;
+    padding: 0;
+    margin: 0;
+}
+
+.btn-primary {
+    width: 100%;
+    border-radius: 8px;
+    padding: 10px;
+    font-weight: 500;
+}
+.btn-primary:hover { background: #1a3d7c; }
+.small-link { font-size: 0.875rem; margin-top: 10px; display: block; }
+</style>
 </head>
 <body>
 
@@ -198,22 +205,22 @@ if (isset($_POST['login'])) {
             <label for="emailid" class="form-label">Email or Admin Username</label>
             <input type="text" class="form-control" name="emailid" id="emailid" required autocomplete="off">
         </div>
+
         <div class="mb-1 text-start">
             <label for="password" class="form-label">Password</label>
-            <input type="password" class="form-control" name="password" id="password" required autocomplete="off">
-            <div class="small-link mt-2">
-                <a href="user-forgot-password.php">Forgot password?</a>
+            <div class="input-group">
+                <input type="password" class="form-control" name="password" id="password" required autocomplete="off">
+                <button type="button" class="toggle-password" id="togglePassword"><i class="bi bi-eye"></i></button>
             </div>
+            <a href="user-forgot-password.php" class="small-link">Forgot password?</a>
         </div>
-        <button type="submit" name="login" class="btn btn-primary mt-3">Login</button>
-        <div class="small-link mt-3">
-            <span>Don't have an account? <a href="signup.php">Register here</a></span>
-        </div>
+
+        <button type="submit" name="login" class="btn btn-primary mt-2">Login</button>
+        <span class="small-link mt-3">Don't have an account? <a href="signup.php">Register here</a></span>
     </form>
 </div>
 
-<!-- ✅ Toast Container -->
-<div class="position-fixed top-0 end-0 p-3" style="z-index: 1055">
+<div class="position-fixed top-0 end-0 p-3" style="z-index:1055">
   <div id="liveToast" class="toast align-items-center text-white border-0" role="alert">
     <div class="d-flex">
       <div class="toast-body" id="toast-message"></div>
@@ -223,31 +230,36 @@ if (isset($_POST['login'])) {
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-
+<script>
 <?php
-// ✅ Toast Display
-if (isset($_SESSION['toast'])) {
-    $toast = $_SESSION['toast'];
-    $bg = match ($toast['type']) {
-        'success' => 'bg-success',
-        'danger' => 'bg-danger',
-        'warning' => 'bg-warning text-dark',
-        'info' => 'bg-info text-dark',
-        default => 'bg-secondary',
+if(isset($_SESSION['toast'])){
+    $toast=$_SESSION['toast'];
+    $bg=match($toast['type']){
+        'success'=>'bg-success',
+        'danger'=>'bg-danger',
+        'warning'=>'bg-warning text-dark',
+        'info'=>'bg-info text-dark',
+        default=>'bg-secondary',
     };
-    echo "
-    <script>
-    document.addEventListener('DOMContentLoaded', () => {
-        const toastEl = document.getElementById('liveToast');
-        const toastBody = document.getElementById('toast-message');
-        toastEl.className = 'toast align-items-center border-0 {$bg}';
-        toastBody.textContent = '{$toast['message']}';
-        const toast = new bootstrap.Toast(toastEl);
-        toast.show();
-    });
-    </script>";
+    echo "document.addEventListener('DOMContentLoaded',()=>{const toastEl=document.getElementById('liveToast');const toastBody=document.getElementById('toast-message');toastEl.className='toast align-items-center border-0 $bg';toastBody.textContent='{$toast['message']}';new bootstrap.Toast(toastEl).show();});";
     unset($_SESSION['toast']);
 }
 ?>
+
+// Toggle password visibility
+document.getElementById('togglePassword').addEventListener('click', function(){
+    const pw = document.getElementById('password');
+    const icon = this.querySelector('i');
+    if(pw.type === 'password'){
+        pw.type = 'text';
+        icon.classList.remove('bi-eye');
+        icon.classList.add('bi-eye-slash');
+    }else{
+        pw.type = 'password';
+        icon.classList.remove('bi-eye-slash');
+        icon.classList.add('bi-eye');
+    }
+});
+</script>
 </body>
 </html>
