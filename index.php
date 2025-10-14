@@ -1,60 +1,136 @@
 <?php
 session_start();
-error_reporting(0);
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
 include('includes/config.php');
 
-// 🔹 If already logged in, clear session (optional)
-if ($_SESSION['login'] != '$email') {
-    $_SESSION['login'] = '$student_id';
-}
-
-// 🔸 When user clicks LOGIN
 if (isset($_POST['login'])) {
-    $email = $_POST['emailid'];
-    $password = md5($_POST['password']);
+    $email = trim($_POST['emailid']);
+    $password = $_POST['password'];
 
-    // 🔸 1. Check Admin Login first
-    $sqlAdmin = "SELECT UserName, Password FROM admin WHERE UserName=:email";
+    // 1️⃣ Local admin login
+    $sqlAdmin = "SELECT UserName, Password FROM admin WHERE UserName = :email";
     $queryAdmin = $dbh->prepare($sqlAdmin);
     $queryAdmin->bindParam(':email', $email, PDO::PARAM_STR);
     $queryAdmin->execute();
     $adminResult = $queryAdmin->fetch(PDO::FETCH_OBJ);
 
-    if ($adminResult) {
-        if ($adminResult->Password === $password) {
-            $_SESSION['alogin'] = $email;
-            header("Location: admin/dashboard.php");
+    if ($adminResult && $adminResult->Password === md5($password)) {
+        $_SESSION['alogin'] = $email;
+        header("Location: admin/dashboard.php");
+        exit;
+    }
+
+    // 2️⃣ External API login
+    $apiLoginUrl = "https://api.rtc-bb.camai.kh/api/auth/login";
+    $payload = json_encode(['email' => $email, 'password' => $password]);
+
+    $ch = curl_init($apiLoginUrl);
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST => true,
+        CURLOPT_POSTFIELDS => $payload,
+        CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
+        CURLOPT_SSL_VERIFYPEER => false
+    ]);
+    $response = curl_exec($ch);
+    $statusCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curlError = curl_error($ch);
+    curl_close($ch);
+
+    if ($curlError) {
+        $_SESSION['toast'] = ['type' => 'danger', 'message' => "cURL Error: $curlError"];
+        header("Location: index.php");
+        exit;
+    }
+
+    $result = json_decode($response, true);
+    file_put_contents('api_debug.log', "Login response:\n" . print_r($result, true));
+
+    // Extract token
+    $token = $result['token'] ?? $result['access_token'] ?? ($result['data']['token'] ?? null);
+
+    if ($statusCode === 200 && $token) {
+        // Fetch user details
+        $userDetailUrl = "https://api.rtc-bb.camai.kh/api/auth/get_detail_user";
+
+        $ch = curl_init($userDetailUrl);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HTTPHEADER => [
+                'Authorization: Bearer ' . $token,
+                'Accept: application/json'
+            ],
+            CURLOPT_SSL_VERIFYPEER => false
+        ]);
+        $userResponse = curl_exec($ch);
+        $detailStatus = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        $userData = json_decode($userResponse, true);
+        file_put_contents('api_debug.log', "User detail response:\n" . print_r($userData, true), FILE_APPEND);
+
+        if ($detailStatus === 200 && !empty($userData['user'])) {
+            $user = $userData['user'];
+            $detail = $user['user_detail'] ?? [];
+
+            // ✅ Map external data to local fields
+            if ($user) {
+                $studentId = $user['user_detail']['id_card'] ?? null;
+                $fullName = $user['user_detail']['latin_name'] ?? ($user['name'] ?? 'Unknown');
+                $mobile = $user['user_detail']['phone_number'] ?? '';
+                $emailId = $user['email'] ?? $email;
+
+                // Initialize $checkUser
+                $checkUser = $dbh->prepare("SELECT StudentId FROM tblstudents WHERE EmailId = :email");
+                $checkUser->bindParam(':email', $emailId);
+                $checkUser->execute();
+
+                if ($checkUser->rowCount() > 0) {
+                    // Update existing user
+                    $updateUser = $dbh->prepare("
+                        UPDATE tblstudents 
+                        SET FullName = :name, MobileNumber = :mobile, StudentId = :id, Status = 1 
+                        WHERE EmailId = :email
+                    ");
+                    $updateUser->bindParam(':name', $fullName);
+                    $updateUser->bindParam(':mobile', $mobile);
+                    $updateUser->bindParam(':id', $studentId);
+                    $updateUser->bindParam(':email', $emailId);
+                    $updateUser->execute();
+                } else {
+                    // Insert new user
+                    $insertUser = $dbh->prepare("
+                        INSERT INTO tblstudents (StudentId, FullName, EmailId, MobileNumber, Password, Status)
+                        VALUES (:id, :name, :email, :mobile, :password, 1)
+                    ");
+                    $insertUser->bindParam(':id', $studentId);
+                    $insertUser->bindParam(':name', $fullName);
+                    $insertUser->bindParam(':email', $emailId);
+                    $insertUser->bindParam(':mobile', $mobile);
+                    $insertUser->bindValue(':password', md5($password));
+                    $insertUser->execute();
+                }
+            }
+
+
+            $_SESSION['stdid'] = $studentId;
+            $_SESSION['login'] = $emailId;
+            $_SESSION['token_external'] = $token;
+            $_SESSION['username'] = $fullName;
+
+            header("Location: dashboard.php");
             exit;
         } else {
-            $_SESSION['toast'] = ['type' => 'danger', 'message' => 'Incorrect password for admin.'];
+            $_SESSION['toast'] = ['type' => 'danger', 'message' => 'Failed to fetch user details from external system.'];
         }
     } else {
-        // 🔸 2. Check Student Login
-        $sqlStudent = "SELECT EmailId, Password, StudentId, Status FROM tblstudents WHERE EmailId=:email";
-        $queryStudent = $dbh->prepare($sqlStudent);
-        $queryStudent->bindParam(':email', $email, PDO::PARAM_STR);
-        $queryStudent->execute();
-        $student = $queryStudent->fetch(PDO::FETCH_OBJ);
-
-        if ($student) {
-            if ($student->Password === $password) {
-                if ($student->Status == 1) {
-                    $_SESSION['stdid'] = $student->StudentId;
-                    $_SESSION['login'] = $email;
-                    header("Location: dashboard.php");
-                    exit;
-                } else {
-                    $_SESSION['toast'] = ['type' => 'danger', 'message' => 'Your account has been blocked. Please contact admin.'];
-                }
-            } else {
-                $_SESSION['toast'] = ['type' => 'danger', 'message' => 'Incorrect password.'];
-            }
-        } else {
-            $_SESSION['toast'] = ['type' => 'warning', 'message' => 'Email not found.'];
-        }
+        $msg = $result['message'] ?? "External login failed (HTTP $statusCode)";
+        $_SESSION['toast'] = ['type' => 'danger', 'message' => $msg];
     }
 }
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -62,8 +138,6 @@ if (isset($_POST['login'])) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Library Management | Login</title>
     <base href="/library/">
-
-    <!-- ✅ Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body {
@@ -116,7 +190,6 @@ if (isset($_POST['login'])) {
 <body>
 
 <div class="login-card">
-    <!-- ✅ Centered Logo -->
     <img src="assets/img/login-logo.png" alt="Library Logo" class="login-logo">
     <h3 class="login-title">Library Login</h3>
 
@@ -149,7 +222,6 @@ if (isset($_POST['login'])) {
   </div>
 </div>
 
-<!-- ✅ Bootstrap JS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
 <?php
@@ -177,6 +249,5 @@ if (isset($_SESSION['toast'])) {
     unset($_SESSION['toast']);
 }
 ?>
-
 </body>
 </html>
