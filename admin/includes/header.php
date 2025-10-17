@@ -1,3 +1,6 @@
+<?php
+session_start();
+?>
 <!-- HEADER -->
 <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm" style="border-bottom: 4px solid #007bff;">
     <div class="container-fluid justify-content-center w-auto">
@@ -7,36 +10,39 @@
         </a>
 
         <!-- Toggler/collapse button -->
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNavbar" aria-controls="mainNavbar" aria-expanded="false" aria-label="Toggle navigation">
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#adminNavbar" aria-controls="adminNavbar" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
         </button>
 
         <!-- Navbar links -->
-        <div class="collapse navbar-collapse" id="mainNavbar">
+        <div class="collapse navbar-collapse" id="adminNavbar">
             <ul class="navbar-nav align-items-lg-center">
                 <li class="nav-item mx-1">
-                    <a class="nav-link text-primary fw-medium px-3 py-2 rounded hover-bg" href="dashboard.php">Dashboard</a>
+                    <a class="nav-link text-primary fw-medium px-3 py-2 rounded hover-bg <?php echo basename($_SERVER['PHP_SELF']) == 'dashboard.php' ? 'active' : ''; ?>" href="dashboard.php">Dashboard</a>
                 </li>
                 <li class="nav-item mx-1">
-                    <a class="nav-link text-primary fw-medium px-3 py-2 rounded hover-bg" href="manage-categories.php">Categories</a>
+                    <a class="nav-link text-primary fw-medium px-3 py-2 rounded hover-bg <?php echo basename($_SERVER['PHP_SELF']) == 'manage-categories.php' ? 'active' : ''; ?>" href="manage-categories.php">Categories</a>
                 </li>
                 <li class="nav-item mx-1">
-                    <a class="nav-link text-primary fw-medium px-3 py-2 rounded hover-bg" href="manage-authors.php">Authors</a>
+                    <a class="nav-link text-primary fw-medium px-3 py-2 rounded hover-bg <?php echo basename($_SERVER['PHP_SELF']) == 'manage-authors.php' ? 'active' : ''; ?>" href="manage-authors.php">Authors</a>
                 </li>
                 <li class="nav-item mx-1">
-                    <a class="nav-link text-primary fw-medium px-3 py-2 rounded hover-bg" href="manage-books.php">Books</a>
+                    <a class="nav-link text-primary fw-medium px-3 py-2 rounded hover-bg <?php echo basename($_SERVER['PHP_SELF']) == 'manage-books.php' ? 'active' : ''; ?>" href="manage-books.php">Books</a>
                 </li>
                 <li class="nav-item mx-1">
-                    <a class="nav-link text-primary fw-medium px-3 py-2 rounded hover-bg" href="manage-ebooks.php">EBooks</a>
+                    <a class="nav-link text-primary fw-medium px-3 py-2 rounded hover-bg <?php echo basename($_SERVER['PHP_SELF']) == 'manage-ebooks.php' ? 'active' : ''; ?>" href="manage-ebooks.php">EBooks</a>
                 </li>
                 <li class="nav-item mx-1">
-                    <a class="nav-link text-primary fw-medium px-3 py-2 rounded hover-bg" href="manage-issued-books.php">Issued Books</a>
+                    <a class="nav-link text-primary fw-medium px-3 py-2 rounded hover-bg <?php echo basename($_SERVER['PHP_SELF']) == 'manage-issued-books.php' ? 'active' : ''; ?>" href="manage-issued-books.php">Issued Books</a>
                 </li>
                 <li class="nav-item mx-1">
-                    <a class="nav-link text-primary fw-medium px-3 py-2 rounded hover-bg" href="reg-students.php">Students</a>
+                    <a class="nav-link text-primary fw-medium px-3 py-2 rounded hover-bg <?php echo basename($_SERVER['PHP_SELF']) == 'reg-students.php' ? 'active' : ''; ?>" href="reg-students.php">Students</a>
                 </li>
                 <li class="nav-item mx-1">
-                    <a class="nav-link text-primary fw-medium px-3 py-2 rounded hover-bg" href="change-password.php">Change Password</a>
+                    <a class="nav-link text-primary fw-medium px-3 py-2 rounded hover-bg <?php echo basename($_SERVER['PHP_SELF']) == 'change-password.php' ? 'active' : ''; ?>" href="change-password.php">Change Password</a>
+                </li>
+                <li class="nav-item mx-1">
+                    <a class="nav-link text-primary fw-medium px-3 py-2 rounded hover-bg <?php echo basename($_SERVER['PHP_SELF']) == 'help.php' ? 'active' : ''; ?>" href="help.php">Help</a>
                 </li>
                 <li class="nav-item mx-1">
                     <a class="btn btn-danger fw-bold px-4" href="logout.php">Log Out</a>

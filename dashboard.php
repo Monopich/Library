@@ -49,7 +49,7 @@ $uid  = $_SESSION['stdid'] ?? $_SESSION['loginid'] ?? 0;
                         $totalBooks = $query->fetch(PDO::FETCH_OBJ)->total;
                         ?>
                         <h3><?php echo htmlentities($totalBooks); ?></h3>
-                        Books Listed
+                        Books List
                     </div>
                 </a>
 
@@ -64,7 +64,7 @@ $uid  = $_SESSION['stdid'] ?? $_SESSION['loginid'] ?? 0;
                         $totalBooks = $query->fetch(PDO::FETCH_OBJ)->total;
                         ?>
                         <h3><?php echo htmlentities($totalBooks); ?></h3>
-                        Books Listed
+                        EBooks List
                     </div>
                 </a>
 
