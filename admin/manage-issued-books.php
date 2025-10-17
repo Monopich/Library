@@ -145,7 +145,7 @@ foreach ($results as $result):
             data-fine="<?= htmlentities($result->fine) ?>"
             data-returnstatus="<?= $result->RetrunStatus ?>"
         >
-            <i class="bi bi-pencil-square"></i> Edit
+            <i class="bi bi-pencil-square"></i> Return
         </button>
     </td>
 </tr>

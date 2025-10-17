@@ -46,7 +46,7 @@ if (strlen($_SESSION['alogin']) == 0) {
                         $listdbooks = $query->rowCount();
                         ?>
                         <h3><?php echo htmlentities($listdbooks); ?></h3>
-                        Books Listed
+                        Books List
                     </div>
                 </a>
 
@@ -61,7 +61,7 @@ if (strlen($_SESSION['alogin']) == 0) {
                         $listdbooks = $query->rowCount();
                         ?>
                         <h3><?php echo htmlentities($listdbooks); ?></h3>
-                        EBooks Listed
+                        EBooks List
                     </div>
                 </a>
 
@@ -106,7 +106,7 @@ if (strlen($_SESSION['alogin']) == 0) {
                         $listdathrs = $query4->rowCount();
                         ?>
                         <h3><?php echo htmlentities($listdathrs); ?></h3>
-                        Authors Listed
+                        Authors List
                     </div>
                 </a>
 
@@ -121,7 +121,7 @@ if (strlen($_SESSION['alogin']) == 0) {
                         $listdcats = $query5->rowCount();
                         ?>
                         <h3><?php echo htmlentities($listdcats); ?></h3>
-                        Listed Categories
+                        Categories List
                     </div>
                 </a>
             </div>

@@ -40,6 +40,10 @@ session_start();
                     </li>
 
                     <li class="nav-item mx-1">
+                        <a class="nav-link text-primary fw-medium px-3 py-2 rounded hover-bg <?php echo basename($_SERVER['PHP_SELF']) == 'help.php' ? 'active' : ''; ?>" href="help.php">Help</a>
+                    </li>
+
+                    <li class="nav-item mx-1">
                         <a class="btn btn-danger fw-bold px-4" href="logout.php">Log Out</a>
                     </li>
                 <?php } else { ?>
