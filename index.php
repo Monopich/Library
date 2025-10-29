@@ -9,27 +9,48 @@ if (!empty($_SESSION['login'])) {
 }
 
 // 2️⃣ RTC token exists? Try auto-login
-if (isset($_COOKIE['access_token'])) {
+if (!empty($_COOKIE['access_token'])) {
     $token = $_COOKIE['access_token'];
 
-    $ch = curl_init("https://api.rtc-bb.camai.kh/api/auth/get_detail_user");
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, [
-        "Authorization: Bearer $token"
-    ]);
-    $response = curl_exec($ch);
-    curl_close($ch);
+    try {
+        // Call RTC API
+        $ch = curl_init("https://api.rtc-bb.camai.kh/api/auth/get_detail_user");
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, ["Authorization: Bearer $token"]);
+        $response = curl_exec($ch);
 
-    $user = json_decode($response, true);
+        if ($response === false) {
+            throw new Exception('cURL Error: ' . curl_error($ch));
+        }
 
-    if (isset($user['user']['id'])) {
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($httpCode !== 200) {
+            throw new Exception("RTC API returned HTTP code $httpCode");
+        }
+
+        $user = json_decode($response, true);
+
+        if (!isset($user['user']['id'])) {
+            throw new Exception("Invalid token or user not found");
+        }
+
+        // Token valid → create Library session
         $_SESSION['login'] = true;
-        $_SESSION['stdid'] = $user['user']['user_detail']['id_card']; // student ID
-        $_SESSION['username'] = $user['user']['name']; // full name
+        $_SESSION['stdid'] = $user['user']['user_detail']['id_card'];
+        $_SESSION['username'] = $user['user']['name'];
         $_SESSION['roles'] = $user['user']['roles'] ?? ['Student'];
-        
+
+        // Redirect to dashboard automatically
         header('Location: dashboard.php');
         exit;
+
+    } catch (Exception $e) {
+        // Handle errors gracefully
+        error_log("RTC auto-login error: " . $e->getMessage());
+        // Optionally, show a message or just let them see the login page
+        $_SESSION['toast'] = ['type' => 'danger', 'message' => 'RTC auto-login failed: ' . $e->getMessage()];
     }
 }
 
