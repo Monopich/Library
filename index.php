@@ -52,8 +52,6 @@ if (!isset($_SESSION['login']) && isset($_COOKIE['access_token'])) {
             $_SESSION['username'] = $fullName;
             $_SESSION['token_external'] = $token;
 
-            header("Location: dashboard.php");
-            exit;
         }
     }
 }
