@@ -10,7 +10,7 @@ include('includes/config.php');
 if (!isset($_SESSION['login']) && isset($_COOKIE['access_token'])) {
     $token = $_COOKIE['access_token'];
 
-    $checkUserUrl = "https://api.rtc-bb.camai.kh/api/auth/me";
+    $checkUserUrl = "https://api.rtc-bb.camai.kh/api/auth/get_detail_user";
     $ch = curl_init($checkUserUrl);
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,
