@@ -24,11 +24,11 @@ if (isset($_COOKIE['access_token'])) {
     if (!empty($user['id'])) {
         // Create Library session
         $_SESSION['login'] = $user;
-        header('Location: dashboard.php');
+        header('Location: index.php');
         exit;
     } else {
         // Invalid token, redirect to RTC login
-        header('Location: https://rtc-bb.camai.kh/login.php');
+        header('Location: https://rtc-bb.camai.kh/en/login');
         exit;
     }
 } else {
