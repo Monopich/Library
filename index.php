@@ -22,12 +22,12 @@ if (isset($_COOKIE['access_token'])) {
 
     $user = json_decode($response, true);
 
-    if (isset($user['id'])) {
+    if (isset($user['user']['id'])) {
         $_SESSION['login'] = true;
-        $_SESSION['user_id'] = $user['id'];
-        $_SESSION['user_name'] = $user['name'];
-        $_SESSION['roles'] = $user['roles'];
-
+        $_SESSION['stdid'] = $user['user']['user_detail']['id_card']; // student ID
+        $_SESSION['username'] = $user['user']['name']; // full name
+        $_SESSION['roles'] = $user['user']['roles'] ?? ['Student'];
+        
         header('Location: dashboard.php');
         exit;
     }
