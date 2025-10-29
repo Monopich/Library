@@ -15,7 +15,7 @@ if (isset($_COOKIE['access_token'])) {
     $token = $_COOKIE['access_token'];
 
     // Call RTC API to get user info from token
-    $ch = curl_init('https://rtc-bb.camai.kh/api/auth/get_detail_user');
+    $ch = curl_init('https://api.rtc-bb.camai.kh/api/auth/get_detail_user');
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_HTTPHEADER, ["Authorization: Bearer $token"]);
     $user = json_decode(curl_exec($ch), true);
@@ -33,7 +33,7 @@ if (isset($_COOKIE['access_token'])) {
     }
 } else {
     // No RTC token, show login page
-    header('Location: login.php');
+    header('Location: index.php');
     exit;
 }
 
