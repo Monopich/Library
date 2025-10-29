@@ -9,7 +9,7 @@ if (isset($_COOKIE['access_token'])) {
     $token = $_COOKIE['access_token'];
     echo "<script>console.log('Token: " . $token . "');</script>";
 
-    $ch = curl_init("https://rtc-bb.camai.kh/api/auth/get_detail_user");
+    $ch = curl_init("https://api.rtc-bb.camai.kh/api/auth/get_detail_user");
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_HTTPHEADER, [
         "Authorization: Bearer $token"
