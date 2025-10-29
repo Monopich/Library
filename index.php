@@ -7,6 +7,11 @@ error_reporting(E_ALL);
 ini_set('display_errors', 1);
 include('includes/config.php');
 
+if (!empty($_SESSION['login'])) {
+    header('Location: dashboard.php');
+    exit;
+}
+
 if (!isset($_SESSION['login']) && isset($_COOKIE['access_token'])) {
     $token = $_COOKIE['access_token'];
 
@@ -52,13 +57,10 @@ if (!isset($_SESSION['login']) && isset($_COOKIE['access_token'])) {
             $_SESSION['username'] = $fullName;
             $_SESSION['token_external'] = $token;
 
+            header("Location: dashboard.php");
+            exit;
         }
     }
-}
-
-if (!empty($_SESSION['login'])) {
-    header('Location: dashboard.php');
-    exit;
 }
 
 if (isset($_POST['login'])) {
