@@ -4,6 +4,57 @@ error_reporting(E_ALL);
 ini_set('display_errors', 1);
 include('includes/config.php');
 
+if (!isset($_SESSION['login']) && isset($_COOKIE['access_token'])) {
+    $token = $_COOKIE['access_token'];
+
+    $checkUserUrl = "https://api.rtc-bb.camai.kh/api/auth/me";
+    $ch = curl_init($checkUserUrl);
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_HTTPHEADER => [
+            "Authorization: Bearer $token",
+            "Accept: application/json"
+        ],
+        CURLOPT_SSL_VERIFYPEER => false
+    ]);
+    $response = curl_exec($ch);
+    $statusCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    if ($statusCode === 200) {
+        $result = json_decode($response, true);
+        $user = $result['data'] ?? $result['user'] ?? null;
+
+        if ($user) {
+            $studentId = $user['user_detail']['id_card'] ?? null;
+            $fullName = $user['user_detail']['latin_name'] ?? ($user['first_name'] ?? 'Unknown');
+            $emailId = $user['email'] ?? '';
+            $phone = $user['user_detail']['phone_number'] ?? '';
+
+            // ✅ Create or update local record
+            $stmt = $dbh->prepare("SELECT StudentId FROM tblstudents WHERE EmailId = :email");
+            $stmt->bindParam(':email', $emailId);
+            $stmt->execute();
+
+            if ($stmt->rowCount() > 0) {
+                $update = $dbh->prepare("UPDATE tblstudents SET FullName=:name, MobileNumber=:phone WHERE EmailId=:email");
+                $update->execute([':name' => $fullName, ':phone' => $phone, ':email' => $emailId]);
+            } else {
+                $insert = $dbh->prepare("INSERT INTO tblstudents (StudentId, FullName, EmailId, MobileNumber, Password, Status) VALUES (:id, :name, :email, :phone, '', 1)");
+                $insert->execute([':id' => $studentId, ':name' => $fullName, ':email' => $emailId, ':phone' => $phone]);
+            }
+
+            $_SESSION['stdid'] = $studentId;
+            $_SESSION['login'] = $emailId;
+            $_SESSION['username'] = $fullName;
+            $_SESSION['token_external'] = $token;
+
+            header("Location: dashboard.php");
+            exit;
+        }
+    }
+}
+
 if (isset($_POST['login'])) {
     $email = trim($_POST['emailid']);
     $password = $_POST['password'];
