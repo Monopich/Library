@@ -4,31 +4,34 @@ error_reporting(E_ALL);
 ini_set('display_errors', 1);
 include('includes/config.php');
 
-// If session already exists, go to dashboard
-if (!empty($_SESSION['login'])) {
-    header('Location: dashboard.php');
-    exit;
-}
-
 // If RTC token exists, verify and create local session
 if (isset($_COOKIE['access_token'])) {
     $token = $_COOKIE['access_token'];
+    echo "<script>console.log('Token: " . $token . "');</script>";
 
-    // Call RTC API to get user info from token
-    $ch = curl_init('https://api.rtc-bb.camai.kh/api/auth/get_detail_user');
+    $ch = curl_init("https://rtc-bb.camai.kh/api/auth/get_detail_user");
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, ["Authorization: Bearer $token"]);
-    $user = json_decode(curl_exec($ch), true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        "Authorization: Bearer $token"
+    ]);
+    $response = curl_exec($ch);
     curl_close($ch);
 
-    if (!empty($user['id'])) {
-        // Create Library session
-        $_SESSION['login'] = $user;
-        header('Location: index.php');
+    $user = json_decode($response, true);
+
+    if (isset($user['id'])) {
+        // Token valid → create Library session
+        $_SESSION['login'] = true;
+        $_SESSION['user_id'] = $user['id'];
+        $_SESSION['user_name'] = $user['name'];
+        $_SESSION['roles'] = $user['roles'];
+
+        // Redirect to Library dashboard
+        header('Location: dashboard.php');
         exit;
     } else {
-        // Invalid token, redirect to RTC login
-        header('Location: https://rtc-bb.camai.kh/en/login');
+        // Invalid token → redirect to login page
+        header('Location: index.php');
         exit;
     }
 } else {
