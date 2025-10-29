@@ -1,13 +1,16 @@
 <?php
 session_start();
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
 include('includes/config.php');
 
-// If RTC token exists, verify and create local session
+// 1️⃣ Already logged in? Redirect immediately to dashboard
+if (!empty($_SESSION['login'])) {
+    header('Location: dashboard.php');
+    exit;
+}
+
+// 2️⃣ RTC token exists? Try auto-login
 if (isset($_COOKIE['access_token'])) {
     $token = $_COOKIE['access_token'];
-    echo "<script>console.log('Token: " . $token . "');</script>";
 
     $ch = curl_init("https://api.rtc-bb.camai.kh/api/auth/get_detail_user");
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -20,24 +23,14 @@ if (isset($_COOKIE['access_token'])) {
     $user = json_decode($response, true);
 
     if (isset($user['id'])) {
-        // Token valid → create Library session
         $_SESSION['login'] = true;
         $_SESSION['user_id'] = $user['id'];
         $_SESSION['user_name'] = $user['name'];
         $_SESSION['roles'] = $user['roles'];
 
-        // Redirect to Library dashboard
         header('Location: dashboard.php');
         exit;
-    } else {
-        // Invalid token → redirect to login page
-        header('Location: index.php');
-        exit;
     }
-} else {
-    // No RTC token, show login page
-    header('Location: index.php');
-    exit;
 }
 
 if (isset($_POST['login'])) {
