@@ -1,4 +1,7 @@
 <?php
+session_name('rtc_session');
+ini_set('session.cookie_path', '/');
+ini_set('session.cookie_domain', 'rtc-bb.camai.kh');
 session_start();
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
