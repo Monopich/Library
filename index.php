@@ -4,65 +4,37 @@ error_reporting(E_ALL);
 ini_set('display_errors', 1);
 include('includes/config.php');
 
-// 1️⃣ If user is already logged in locally, redirect
+// If session already exists, go to dashboard
 if (!empty($_SESSION['login'])) {
     header('Location: dashboard.php');
     exit;
 }
 
-// 2️⃣ Check RTC access token cookie
-if (!empty($_COOKIE['access_token'])) {
+// If RTC token exists, verify and create local session
+if (isset($_COOKIE['access_token'])) {
     $token = $_COOKIE['access_token'];
 
-    $apiUrl = "https://api.rtc-bb.camai.kh/api/auth/get_detail_user";
-    $ch = curl_init($apiUrl);
-    curl_setopt_array($ch, [
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_HTTPHEADER => [
-            "Authorization: Bearer $token",
-            "Accept: application/json"
-        ],
-        CURLOPT_SSL_VERIFYPEER => false
-    ]);
-    $response = curl_exec($ch);
-    $status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    // Call RTC API to get user info from token
+    $ch = curl_init('https://rtc-bb.camai.kh/api/auth/get_detail_user');
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, ["Authorization: Bearer $token"]);
+    $user = json_decode(curl_exec($ch), true);
     curl_close($ch);
 
-    if ($status === 200) {
-        $result = json_decode($response, true);
-        $user = $result['data'] ?? $result['user'] ?? null;
-
-        if ($user) {
-            // Map user data
-            $studentId = $user['user_detail']['id_card'] ?? null;
-            $fullName = $user['user_detail']['latin_name'] ?? ($user['first_name'] ?? 'Unknown');
-            $emailId = $user['email'] ?? '';
-            $phone = $user['user_detail']['phone_number'] ?? '';
-
-            // Create or update local record
-            $stmt = $dbh->prepare("SELECT StudentId FROM tblstudents WHERE EmailId = :email");
-            $stmt->bindParam(':email', $emailId);
-            $stmt->execute();
-
-            if ($stmt->rowCount() > 0) {
-                $update = $dbh->prepare("UPDATE tblstudents SET FullName=:name, MobileNumber=:phone WHERE EmailId=:email");
-                $update->execute([':name' => $fullName, ':phone' => $phone, ':email' => $emailId]);
-            } else {
-                $insert = $dbh->prepare("INSERT INTO tblstudents (StudentId, FullName, EmailId, MobileNumber, Password, Status) VALUES (:id, :name, :email, :phone, '', 1)");
-                $insert->execute([':id' => $studentId, ':name' => $fullName, ':email' => $emailId, ':phone' => $phone]);
-            }
-
-            // Set local session
-            $_SESSION['stdid'] = $studentId;
-            $_SESSION['login'] = $emailId;
-            $_SESSION['username'] = $fullName;
-            $_SESSION['token_external'] = $token;
-
-            // ✅ Redirect immediately to dashboard
-            header("Location: dashboard.php");
-            exit;
-        }
+    if (!empty($user['id'])) {
+        // Create Library session
+        $_SESSION['login'] = $user;
+        header('Location: dashboard.php');
+        exit;
+    } else {
+        // Invalid token, redirect to RTC login
+        header('Location: https://rtc-bb.camai.kh/login.php');
+        exit;
     }
+} else {
+    // No RTC token, show login page
+    header('Location: login.php');
+    exit;
 }
 
 if (isset($_POST['login'])) {
