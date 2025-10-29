@@ -1,17 +1,21 @@
 <?php
-session_name('rtc_session');
-ini_set('session.cookie_path', '/');
-ini_set('session.cookie_domain', 'rtc-bb.camai.kh');
 session_start();
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 include('includes/config.php');
 
-if (!isset($_SESSION['login']) && isset($_COOKIE['access_token'])) {
+// 1️⃣ If user is already logged in locally, redirect
+if (!empty($_SESSION['login'])) {
+    header('Location: dashboard.php');
+    exit;
+}
+
+// 2️⃣ Check RTC access token cookie
+if (!empty($_COOKIE['access_token'])) {
     $token = $_COOKIE['access_token'];
 
-    $checkUserUrl = "https://api.rtc-bb.camai.kh/api/auth/get_detail_user";
-    $ch = curl_init($checkUserUrl);
+    $apiUrl = "https://api.rtc-bb.camai.kh/api/auth/get_detail_user";
+    $ch = curl_init($apiUrl);
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_HTTPHEADER => [
@@ -21,20 +25,21 @@ if (!isset($_SESSION['login']) && isset($_COOKIE['access_token'])) {
         CURLOPT_SSL_VERIFYPEER => false
     ]);
     $response = curl_exec($ch);
-    $statusCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
 
-    if ($statusCode === 200) {
+    if ($status === 200) {
         $result = json_decode($response, true);
         $user = $result['data'] ?? $result['user'] ?? null;
 
         if ($user) {
+            // Map user data
             $studentId = $user['user_detail']['id_card'] ?? null;
             $fullName = $user['user_detail']['latin_name'] ?? ($user['first_name'] ?? 'Unknown');
             $emailId = $user['email'] ?? '';
             $phone = $user['user_detail']['phone_number'] ?? '';
 
-            // ✅ Create or update local record
+            // Create or update local record
             $stmt = $dbh->prepare("SELECT StudentId FROM tblstudents WHERE EmailId = :email");
             $stmt->bindParam(':email', $emailId);
             $stmt->execute();
@@ -47,11 +52,13 @@ if (!isset($_SESSION['login']) && isset($_COOKIE['access_token'])) {
                 $insert->execute([':id' => $studentId, ':name' => $fullName, ':email' => $emailId, ':phone' => $phone]);
             }
 
+            // Set local session
             $_SESSION['stdid'] = $studentId;
             $_SESSION['login'] = $emailId;
             $_SESSION['username'] = $fullName;
             $_SESSION['token_external'] = $token;
 
+            // ✅ Redirect immediately to dashboard
             header("Location: dashboard.php");
             exit;
         }
