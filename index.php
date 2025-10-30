@@ -2,56 +2,65 @@
 session_start();
 include('includes/config.php');
 
-// 1️⃣ Already logged in? Redirect immediately to dashboard
-if (!empty($_SESSION['login'])) {
-    header('Location: dashboard.php');
-    exit;
+$debugFile = __DIR__ . '/sso_debug.log';
+function log_debug($msg) {
+    global $debugFile;
+    file_put_contents($debugFile, "[".date('Y-m-d H:i:s')."] $msg\n", FILE_APPEND);
 }
 
-// 2️⃣ RTC token exists? Try auto-login
-if (!empty($_COOKIE['access_token'])) {
-    $token = $_COOKIE['access_token'];
+// Auto-login via RTC token
+function rtcAutoLogin($token, $dbh) {
+    log_debug("⚡ Starting RTC auto-login with token: $token");
 
     try {
-        // Call RTC API
         $ch = curl_init("https://api.rtc-bb.camai.kh/api/auth/get_detail_user");
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_HTTPHEADER, ["Authorization: Bearer $token"]);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
         $response = curl_exec($ch);
-
-        if ($response === false) {
-            throw new Exception('cURL Error: ' . curl_error($ch));
-        }
-
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
+
+        log_debug("RTC API response code: $httpCode");
+        log_debug("RTC API response: $response");
 
         if ($httpCode !== 200) {
             throw new Exception("RTC API returned HTTP code $httpCode");
         }
 
         $user = json_decode($response, true);
-
         if (!isset($user['user']['id'])) {
             throw new Exception("Invalid token or user not found");
         }
 
-        // Token valid → create Library session
+        // Create Library session
         $_SESSION['login'] = true;
         $_SESSION['stdid'] = $user['user']['user_detail']['id_card'];
         $_SESSION['username'] = $user['user']['name'];
         $_SESSION['roles'] = $user['user']['roles'] ?? ['Student'];
 
-        // Redirect to dashboard automatically
+        log_debug("✅ RTC auto-login successful for user: " . $_SESSION['username']);
         header('Location: dashboard.php');
         exit;
 
     } catch (Exception $e) {
-        // Handle errors gracefully
-        error_log("RTC auto-login error: " . $e->getMessage());
-        // Optionally, show a message or just let them see the login page
+        log_debug("⚠️ RTC auto-login error: " . $e->getMessage());
         $_SESSION['toast'] = ['type' => 'danger', 'message' => 'RTC auto-login failed: ' . $e->getMessage()];
     }
+}
+
+// 1️⃣ Already logged in locally?
+if (!empty($_SESSION['login'])) {
+    log_debug("User already logged in, redirecting to dashboard.");
+    header('Location: dashboard.php');
+    exit;
+}
+
+// 2️⃣ Check token from GET/POST
+$token = $_GET['token'] ?? $_POST['token'] ?? null;
+if ($token) {
+    log_debug("Token received: $token");
+    rtcAutoLogin($token, $dbh);
 }
 
 if (isset($_POST['login'])) {
