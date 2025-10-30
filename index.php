@@ -11,6 +11,7 @@ if (!empty($_SESSION['login']) || !empty($_SESSION['alogin'])) {
 // ✅ 2️⃣ RTC token exists? Try auto-login using SSO
 if (!empty($_COOKIE['access_token'])) {
     $token = $_COOKIE['access_token'];
+    error_log("🪪 Library SSO Token: " . $token);
 
     try {
         $apiUrl = "https://api.rtc-bb.camai.kh/api/auth/get_detail_user";
