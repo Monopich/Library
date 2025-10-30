@@ -11,22 +11,24 @@ if (!empty($_SESSION['login'])) {
 // 2️⃣ Auto-login from RTC token
 $rtcToken = $_COOKIE['access_token'] ?? null;
 
-if ($rtcToken) {
+if ($rtcToken && !isset($_POST['login'])) {
     try {
         // Verify token with RTC API
         $ch = curl_init("https://api.rtc-bb.camai.kh/api/auth/get_detail_user");
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_HTTPHEADER => ["Authorization: Bearer $rtcToken"],
-            CURLOPT_SSL_VERIFYPEER => false,
-            CURLOPT_TIMEOUT => 10
+            CURLOPT_SSL_VERIFYPEER => true, // Changed to true for security
+            CURLOPT_TIMEOUT => 10,
+            CURLOPT_FAILONERROR => true
         ]);
         
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlError = curl_error($ch);
         curl_close($ch);
 
-        if ($httpCode === 200) {
+        if ($httpCode === 200 && !empty($response)) {
             $userData = json_decode($response, true);
             
             if (isset($userData['user']['id'])) {
@@ -38,6 +40,11 @@ if ($rtcToken) {
                 $phoneNumber = $user['user_detail']['phone_number'] ?? '';
                 $emailId = $user['email'] ?? '';
                 $roles = $user['roles'] ?? ['Student'];
+
+                // Validate required fields
+                if (empty($emailId)) {
+                    throw new Exception("Email not found in user data");
+                }
 
                 // Sync with local database
                 if ($emailId) {
@@ -53,7 +60,11 @@ if ($rtcToken) {
                         $updateUser->bindParam(':email', $emailId);
                         $updateUser->execute();
                     } else {
-                        // Insert new user
+                        // Insert new user with proper validation
+                        if (empty($studentId)) {
+                            $studentId = 'LIB_' . uniqid(); // Generate library ID if no student ID
+                        }
+                        
                         $insertUser = $dbh->prepare("
                             INSERT INTO tblstudents (StudentId, FullName, EmailId, MobileNumber, Password, Status) 
                             VALUES (:id, :name, :email, :mobile, :password, 1)
@@ -78,14 +89,18 @@ if ($rtcToken) {
                     header('Location: dashboard.php');
                     exit;
                 }
+            } else {
+                throw new Exception("Invalid user data structure");
             }
         } else {
             // Token is invalid, clear it
-            setcookie('access_token', '', time() - 3600, '/');
+            setcookie('access_token', '', time() - 3600, '/', '.rtc-bb.camai.kh'); // Added domain for cross-subdomain
+            error_log("RTC token verification failed: HTTP $httpCode - $curlError");
         }
     } catch (Exception $e) {
         error_log("RTC auto-login error: " . $e->getMessage());
-        // Continue to show login page
+        // Clear invalid token
+        setcookie('access_token', '', time() - 3600, '/', '.rtc-bb.camai.kh');
     }
 }
 
@@ -93,6 +108,13 @@ if ($rtcToken) {
 if (isset($_POST['login'])) {
     $email = trim($_POST['emailid']);
     $password = $_POST['password'];
+
+    // Validate input
+    if (empty($email) || empty($password)) {
+        $_SESSION['toast'] = ['type' => 'danger', 'message' => "Email and password are required"];
+        header("Location: index.php");
+        exit;
+    }
 
     // Local admin login
     $sqlAdmin = "SELECT UserName, Password FROM admin WHERE UserName = :email";
@@ -117,8 +139,9 @@ if (isset($_POST['login'])) {
         CURLOPT_POST => true,
         CURLOPT_POSTFIELDS => $payload,
         CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
-        CURLOPT_SSL_VERIFYPEER => false,
-        CURLOPT_TIMEOUT => 10
+        CURLOPT_SSL_VERIFYPEER => true, // Changed to true for security
+        CURLOPT_TIMEOUT => 10,
+        CURLOPT_FAILONERROR => true
     ]);
     
     $response = curl_exec($ch);
@@ -127,7 +150,7 @@ if (isset($_POST['login'])) {
     curl_close($ch);
 
     if ($curlError) {
-        $_SESSION['toast'] = ['type' => 'danger', 'message' => "cURL Error: $curlError"];
+        $_SESSION['toast'] = ['type' => 'danger', 'message' => "Connection error: Please try again later"];
         header("Location: index.php");
         exit;
     }
@@ -136,76 +159,92 @@ if (isset($_POST['login'])) {
     $token = $result['token'] ?? $result['access_token'] ?? ($result['data']['token'] ?? null);
 
     if ($statusCode === 200 && $token) {
-        // Set RTC token cookie for future auto-login
+        // Set RTC token cookie for future auto-login (cross-subdomain)
         setcookie('access_token', $token, [
             'expires' => time() + (30 * 24 * 60 * 60),
             'path' => '/',
+            'domain' => '.rtc-bb.camai.kh', // Important for cross-subdomain
             'secure' => true,
             'httponly' => true,
             'samesite' => 'Lax'
         ]);
 
-        // Get user details and create session (same as auto-login above)
+        // Get user details and create session
         $ch = curl_init("https://api.rtc-bb.camai.kh/api/auth/get_detail_user");
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_HTTPHEADER => ["Authorization: Bearer $token"],
-            CURLOPT_SSL_VERIFYPEER => false,
-            CURLOPT_TIMEOUT => 10
+            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_TIMEOUT => 10,
+            CURLOPT_FAILONERROR => true
         ]);
         
         $userResponse = curl_exec($ch);
+        $userHttpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
         
-        $userData = json_decode($userResponse, true);
-        
-        if (isset($userData['user']['id'])) {
-            $user = $userData['user'];
-            $studentId = $user['user_detail']['id_card'] ?? null;
-            $fullName = $user['user_detail']['latin_name'] ?? $user['name'] ?? 'Unknown';
-            $phoneNumber = $user['user_detail']['phone_number'] ?? '';
-            $emailId = $user['email'] ?? $email;
-            $roles = $user['roles'] ?? ['Student'];
+        if ($userHttpCode === 200 && !empty($userResponse)) {
+            $userData = json_decode($userResponse, true);
+            
+            if (isset($userData['user']['id'])) {
+                $user = $userData['user'];
+                $studentId = $user['user_detail']['id_card'] ?? null;
+                $fullName = $user['user_detail']['latin_name'] ?? $user['name'] ?? 'Unknown';
+                $phoneNumber = $user['user_detail']['phone_number'] ?? '';
+                $emailId = $user['email'] ?? $email;
+                $roles = $user['roles'] ?? ['Student'];
 
-            // Sync with local database
-            if ($emailId) {
-                $checkUser = $dbh->prepare("SELECT StudentId FROM tblstudents WHERE EmailId = :email");
-                $checkUser->bindParam(':email', $emailId);
-                $checkUser->execute();
-
-                if ($checkUser->rowCount() > 0) {
-                    $updateUser = $dbh->prepare("UPDATE tblstudents SET FullName = :name, MobileNumber = :mobile, Status = 1 WHERE EmailId = :email");
-                    $updateUser->bindParam(':name', $fullName);
-                    $updateUser->bindParam(':mobile', $phoneNumber);
-                    $updateUser->bindParam(':email', $emailId);
-                    $updateUser->execute();
-                } else {
-                    $insertUser = $dbh->prepare("
-                        INSERT INTO tblstudents (StudentId, FullName, EmailId, MobileNumber, Password, Status) 
-                        VALUES (:id, :name, :email, :mobile, :password, 1)
-                    ");
-                    $insertUser->bindParam(':id', $studentId);
-                    $insertUser->bindParam(':name', $fullName);
-                    $insertUser->bindParam(':email', $emailId);
-                    $insertUser->bindParam(':mobile', $phoneNumber);
-                    $insertUser->bindValue(':password', md5(uniqid() . time()));
-                    $insertUser->execute();
+                // Generate library ID if no student ID
+                if (empty($studentId)) {
+                    $studentId = 'LIB_' . uniqid();
                 }
 
-                // Create Library session
-                $_SESSION['login'] = true;
-                $_SESSION['stdid'] = $studentId;
-                $_SESSION['username'] = $fullName;
-                $_SESSION['email'] = $emailId;
-                $_SESSION['roles'] = $roles;
-                $_SESSION['token_external'] = $token;
+                // Sync with local database
+                if ($emailId) {
+                    $checkUser = $dbh->prepare("SELECT StudentId FROM tblstudents WHERE EmailId = :email");
+                    $checkUser->bindParam(':email', $emailId);
+                    $checkUser->execute();
 
-                header("Location: dashboard.php");
-                exit;
+                    if ($checkUser->rowCount() > 0) {
+                        $updateUser = $dbh->prepare("UPDATE tblstudents SET FullName = :name, MobileNumber = :mobile, Status = 1 WHERE EmailId = :email");
+                        $updateUser->bindParam(':name', $fullName);
+                        $updateUser->bindParam(':mobile', $phoneNumber);
+                        $updateUser->bindParam(':email', $emailId);
+                        $updateUser->execute();
+                    } else {
+                        $insertUser = $dbh->prepare("
+                            INSERT INTO tblstudents (StudentId, FullName, EmailId, MobileNumber, Password, Status) 
+                            VALUES (:id, :name, :email, :mobile, :password, 1)
+                        ");
+                        $insertUser->bindParam(':id', $studentId);
+                        $insertUser->bindParam(':name', $fullName);
+                        $insertUser->bindParam(':email', $emailId);
+                        $insertUser->bindParam(':mobile', $phoneNumber);
+                        $insertUser->bindValue(':password', md5(uniqid() . time()));
+                        $insertUser->execute();
+                    }
+
+                    // Create Library session
+                    $_SESSION['login'] = true;
+                    $_SESSION['stdid'] = $studentId;
+                    $_SESSION['username'] = $fullName;
+                    $_SESSION['email'] = $emailId;
+                    $_SESSION['roles'] = $roles;
+                    $_SESSION['token_external'] = $token;
+
+                    header("Location: dashboard.php");
+                    exit;
+                }
             }
         }
+        
+        // If user details fetch failed but login was successful
+        $_SESSION['toast'] = ['type' => 'warning', 'message' => "Login successful but user details incomplete"];
+        header("Location: index.php");
+        exit;
+        
     } else {
-        $msg = $result['message'] ?? "Login failed (HTTP $statusCode)";
+        $msg = $result['message'] ?? "Invalid email or password";
         $_SESSION['toast'] = ['type' => 'danger', 'message' => $msg];
     }
 }
@@ -292,7 +331,7 @@ body {
     <h3 class="login-title">Library Login</h3>
 
     <!-- Show loading message if auto-login is in progress -->
-    <?php if ($rtcToken): ?>
+    <?php if ($rtcToken && !isset($_POST['login'])): ?>
     <div class="auto-login-notice">
         <div class="spinner-border spinner-border-sm me-2" role="status"></div>
         Checking RTC session... Redirecting automatically
@@ -301,14 +340,15 @@ body {
         // Small delay to show the message, then redirect
         setTimeout(() => {
             window.location.reload();
-        }, 500);
+        }, 1000);
     </script>
     <?php endif; ?>
 
     <form method="post">
         <div class="mb-3 text-start">
             <label for="emailid" class="form-label">Email or Admin Username</label>
-            <input type="text" class="form-control" name="emailid" id="emailid" required autocomplete="off">
+            <input type="text" class="form-control" name="emailid" id="emailid" required autocomplete="off" 
+                   value="<?php echo isset($_POST['emailid']) ? htmlspecialchars($_POST['emailid']) : ''; ?>">
         </div>
 
         <div class="mb-3 text-start">
@@ -349,7 +389,8 @@ if(isset($_SESSION['toast'])){
         'info'=>'bg-info text-dark',
         default=>'bg-secondary',
     };
-    echo "document.addEventListener('DOMContentLoaded',()=>{const toastEl=document.getElementById('liveToast');const toastBody=document.getElementById('toast-message');toastEl.className='toast align-items-center border-0 $bg';toastBody.textContent='{$toast['message']}';new bootstrap.Toast(toastEl).show();});";
+    $message = addslashes($toast['message']);
+    echo "document.addEventListener('DOMContentLoaded',()=>{const toastEl=document.getElementById('liveToast');const toastBody=document.getElementById('toast-message');toastEl.className='toast align-items-center border-0 $bg';toastBody.textContent='{$message}';new bootstrap.Toast(toastEl).show();});";
     unset($_SESSION['toast']);
 }
 ?>
