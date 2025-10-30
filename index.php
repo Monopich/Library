@@ -3,20 +3,28 @@ session_start();
 include('includes/config.php');
 $debugFile = __DIR__ . '/sso_debug.log';
 
-// ✅ 1️⃣ Already logged in? Redirect to dashboard immediately
+function log_debug($msg) {
+    global $debugFile;
+    file_put_contents($debugFile, "[".date('Y-m-d H:i:s')."] $msg\n", FILE_APPEND);
+}
+
+log_debug("⚡ Page load started");
+
+// 1️⃣ Already logged in?
 if (!empty($_SESSION['login']) || !empty($_SESSION['alogin'])) {
+    log_debug("✅ User already logged in: " . ($_SESSION['login'] ?? $_SESSION['alogin']));
     header('Location: dashboard.php');
     exit;
 }
 
-// ✅ 2️⃣ RTC token exists? Try auto-login using SSO
-if (!empty($_COOKIE['access_token'])) {
-    $token = $_COOKIE['access_token'];
-    file_put_contents($debugFile, "[".date('Y-m-d H:i:s')."] 🪪 SSO Token: " . $token . "\n", FILE_APPEND);
+// 2️⃣ Check for RTC access token cookie
+$token = $_COOKIE['access_token'] ?? null;
+
+if ($token) {
+    log_debug("🪪 Access token found: $token");
 
     try {
         $apiUrl = "https://api.rtc-bb.camai.kh/api/auth/get_detail_user";
-
         $ch = curl_init($apiUrl);
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
@@ -24,20 +32,20 @@ if (!empty($_COOKIE['access_token'])) {
                 "Authorization: Bearer $token",
                 "Accept: application/json"
             ],
-            CURLOPT_SSL_VERIFYPEER => false, // ⚠️ Disable only for testing; enable on production!
+            CURLOPT_SSL_VERIFYPEER => false,
             CURLOPT_TIMEOUT => 10
         ]);
         $response = curl_exec($ch);
-
         if ($response === false) {
-            throw new Exception('cURL Error: ' . curl_error($ch));
+            throw new Exception('cURL error: ' . curl_error($ch));
         }
-
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
 
+        log_debug("RTC API HTTP Code: $httpCode, Response: $response");
+
         if ($httpCode !== 200) {
-            throw new Exception("Invalid or expired token (HTTP $httpCode)");
+            throw new Exception("Invalid token or HTTP $httpCode");
         }
 
         $userData = json_decode($response, true);
@@ -45,60 +53,27 @@ if (!empty($_COOKIE['access_token'])) {
             throw new Exception("User data missing from RTC response");
         }
 
-        // ✅ Valid RTC token → create Library session
         $user = $userData['user'];
         $detail = $user['user_detail'] ?? [];
 
-        $email = $user['email'];
-        $studentId = $detail['id_card'] ?? $user['id'];
-        $fullName = $user['name'] ?? 'RTC User';
-        $phone = $detail['phone_number'] ?? '';
-
-        // ✅ Check or create local record
-        $stmt = $dbh->prepare("SELECT StudentId FROM tblstudents WHERE EmailId = :email");
-        $stmt->bindParam(':email', $email);
-        $stmt->execute();
-
-        if ($stmt->rowCount() > 0) {
-            $update = $dbh->prepare("
-                UPDATE tblstudents 
-                SET FullName = :name, MobileNumber = :mobile, Status = 1 
-                WHERE EmailId = :email
-            ");
-            $update->bindParam(':name', $fullName);
-            $update->bindParam(':mobile', $phone);
-            $update->bindParam(':email', $email);
-            $update->execute();
-        } else {
-            $insert = $dbh->prepare("
-                INSERT INTO tblstudents (StudentId, FullName, EmailId, MobileNumber, Password, Status)
-                VALUES (:id, :name, :email, :mobile, '', 1)
-            ");
-            $insert->bindParam(':id', $studentId);
-            $insert->bindParam(':name', $fullName);
-            $insert->bindParam(':email', $email);
-            $insert->bindParam(':mobile', $phone);
-            $insert->execute();
-        }
-
-        // ✅ Auto-login user in Library
-        $_SESSION['login'] = $email;
-        $_SESSION['stdid'] = $studentId;
-        $_SESSION['username'] = $fullName;
+        $_SESSION['login'] = $user['email'];
+        $_SESSION['stdid'] = $detail['id_card'] ?? $user['id'];
+        $_SESSION['username'] = $user['name'] ?? 'RTC User';
         $_SESSION['token_external'] = $token;
 
+        log_debug("✅ Auto-login success for: " . $_SESSION['login']);
         header('Location: dashboard.php');
         exit;
 
     } catch (Exception $e) {
-        error_log("RTC auto-login error: " . $e->getMessage());
+        log_debug("❌ RTC auto-login failed: " . $e->getMessage());
         $_SESSION['toast'] = [
             'type' => 'danger',
             'message' => 'Auto-login failed: ' . $e->getMessage()
         ];
     }
 } else {
-    file_put_contents($debugFile, "[".date('Y-m-d H:i:s')."] ⚠️ No access_token cookie found\n", FILE_APPEND);
+    log_debug("⚠️ No access_token cookie found");
 }
 
 // ✅ 3️⃣ Manual login (local or RTC)
