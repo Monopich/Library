@@ -2,7 +2,7 @@
 session_start();
 include('includes/config.php');
 
-// ✅ 1️⃣ Already logged in? Redirect immediately to dashboard
+// ✅ 1️⃣ Already logged in? Redirect to dashboard immediately
 if (!empty($_SESSION['login']) || !empty($_SESSION['alogin'])) {
     header('Location: dashboard.php');
     exit;
@@ -13,12 +13,17 @@ if (!empty($_COOKIE['access_token'])) {
     $token = $_COOKIE['access_token'];
 
     try {
-        // Fetch user details from RTC
-        $ch = curl_init("https://api.rtc-bb.camai.kh/api/auth/get_detail_user");
+        $apiUrl = "https://api.rtc-bb.camai.kh/api/auth/get_detail_user";
+
+        $ch = curl_init($apiUrl);
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_HTTPHEADER => ["Authorization: Bearer $token"],
-            CURLOPT_SSL_VERIFYPEER => false, // ⚠️ disable SSL verification (only for testing)
+            CURLOPT_HTTPHEADER => [
+                "Authorization: Bearer $token",
+                "Accept: application/json"
+            ],
+            CURLOPT_SSL_VERIFYPEER => false, // ⚠️ Disable only for testing; enable on production!
+            CURLOPT_TIMEOUT => 10
         ]);
         $response = curl_exec($ch);
 
@@ -30,23 +35,54 @@ if (!empty($_COOKIE['access_token'])) {
         curl_close($ch);
 
         if ($httpCode !== 200) {
-            throw new Exception("RTC API returned HTTP code $httpCode");
+            throw new Exception("Invalid or expired token (HTTP $httpCode)");
         }
 
         $userData = json_decode($response, true);
-
-        if (!isset($userData['user']['id'])) {
-            throw new Exception("Invalid token or user not found");
+        if (empty($userData['user']['email'])) {
+            throw new Exception("User data missing from RTC response");
         }
 
         // ✅ Valid RTC token → create Library session
         $user = $userData['user'];
         $detail = $user['user_detail'] ?? [];
 
-        $_SESSION['login'] = $user['email'] ?? 'guest@rtc.edu.kh';
-        $_SESSION['stdid'] = $detail['id_card'] ?? $user['id'];
-        $_SESSION['username'] = $user['name'] ?? 'RTC User';
-        $_SESSION['roles'] = $user['roles'] ?? ['Student'];
+        $email = $user['email'];
+        $studentId = $detail['id_card'] ?? $user['id'];
+        $fullName = $user['name'] ?? 'RTC User';
+        $phone = $detail['phone_number'] ?? '';
+
+        // ✅ Check or create local record
+        $stmt = $dbh->prepare("SELECT StudentId FROM tblstudents WHERE EmailId = :email");
+        $stmt->bindParam(':email', $email);
+        $stmt->execute();
+
+        if ($stmt->rowCount() > 0) {
+            $update = $dbh->prepare("
+                UPDATE tblstudents 
+                SET FullName = :name, MobileNumber = :mobile, Status = 1 
+                WHERE EmailId = :email
+            ");
+            $update->bindParam(':name', $fullName);
+            $update->bindParam(':mobile', $phone);
+            $update->bindParam(':email', $email);
+            $update->execute();
+        } else {
+            $insert = $dbh->prepare("
+                INSERT INTO tblstudents (StudentId, FullName, EmailId, MobileNumber, Password, Status)
+                VALUES (:id, :name, :email, :mobile, '', 1)
+            ");
+            $insert->bindParam(':id', $studentId);
+            $insert->bindParam(':name', $fullName);
+            $insert->bindParam(':email', $email);
+            $insert->bindParam(':mobile', $phone);
+            $insert->execute();
+        }
+
+        // ✅ Auto-login user in Library
+        $_SESSION['login'] = $email;
+        $_SESSION['stdid'] = $studentId;
+        $_SESSION['username'] = $fullName;
         $_SESSION['token_external'] = $token;
 
         header('Location: dashboard.php');
@@ -56,12 +92,12 @@ if (!empty($_COOKIE['access_token'])) {
         error_log("RTC auto-login error: " . $e->getMessage());
         $_SESSION['toast'] = [
             'type' => 'danger',
-            'message' => 'RTC auto-login failed: ' . $e->getMessage()
+            'message' => 'Auto-login failed: ' . $e->getMessage()
         ];
     }
 }
 
-// ✅ 3️⃣ Manual login (Library local + RTC API fallback)
+// ✅ 3️⃣ Manual login (local or RTC)
 if (isset($_POST['login'])) {
     $email = trim($_POST['emailid']);
     $password = $_POST['password'];
@@ -71,19 +107,19 @@ if (isset($_POST['login'])) {
     $queryAdmin = $dbh->prepare($sqlAdmin);
     $queryAdmin->bindParam(':email', $email, PDO::PARAM_STR);
     $queryAdmin->execute();
-    $adminResult = $queryAdmin->fetch(PDO::FETCH_OBJ);
+    $admin = $queryAdmin->fetch(PDO::FETCH_OBJ);
 
-    if ($adminResult && $adminResult->Password === md5($password)) {
+    if ($admin && $admin->Password === md5($password)) {
         $_SESSION['alogin'] = $email;
         header("Location: admin/dashboard.php");
         exit;
     }
 
     // --- RTC API Login ---
-    $apiLoginUrl = "https://api.rtc-bb.camai.kh/api/auth/login";
+    $loginUrl = "https://api.rtc-bb.camai.kh/api/auth/login";
     $payload = json_encode(['email' => $email, 'password' => $password]);
 
-    $ch = curl_init($apiLoginUrl);
+    $ch = curl_init($loginUrl);
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_POST => true,
@@ -92,102 +128,87 @@ if (isset($_POST['login'])) {
         CURLOPT_SSL_VERIFYPEER => false,
     ]);
     $response = curl_exec($ch);
-    $statusCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    $curlError = curl_error($ch);
+    $status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $error = curl_error($ch);
     curl_close($ch);
 
-    if ($curlError) {
-        $_SESSION['toast'] = ['type' => 'danger', 'message' => "Network Error: $curlError"];
+    if ($error) {
+        $_SESSION['toast'] = ['type' => 'danger', 'message' => "Network Error: $error"];
         header("Location: index.php");
         exit;
     }
 
     $result = json_decode($response, true);
-    @file_put_contents(__DIR__.'/api_debug.log', "Login response:\n" . print_r($result, true), FILE_APPEND);
-
     $token = $result['token'] ?? $result['access_token'] ?? ($result['data']['token'] ?? null);
 
-    if ($statusCode === 200 && $token) {
-        // Try fetching RTC user details
-        $user = null;
-        $detailEndpoints = [
-            "https://api.rtc-bb.camai.kh/api/auth/get_detail_user",
-            "https://api.rtc-bb.camai.kh/api/auth/me",
-            "https://api.rtc-bb.camai.kh/api/user/me"
-        ];
+    if ($status === 200 && $token) {
+        // Fetch RTC user details
+        $ch = curl_init("https://api.rtc-bb.camai.kh/api/auth/get_detail_user");
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HTTPHEADER => [
+                'Authorization: Bearer ' . $token,
+                'Accept: application/json'
+            ],
+            CURLOPT_SSL_VERIFYPEER => false,
+        ]);
+        $userResponse = curl_exec($ch);
+        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
 
-        foreach ($detailEndpoints as $url) {
-            $ch = curl_init($url);
-            curl_setopt_array($ch, [
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_HTTPHEADER => [
-                    'Authorization: Bearer ' . $token,
-                    'Accept: application/json'
-                ],
-                CURLOPT_SSL_VERIFYPEER => false,
-            ]);
-            $userResponse = curl_exec($ch);
-            $detailStatus = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            curl_close($ch);
-
+        if ($code === 200) {
             $userData = json_decode($userResponse, true);
-            if ($detailStatus === 200 && !empty($userData)) {
-                $user = $userData['data'] ?? $userData['user'] ?? null;
-                break;
+            $user = $userData['user'] ?? null;
+            if ($user) {
+                $detail = $user['user_detail'] ?? [];
+                $studentId = $detail['id_card'] ?? $user['id'];
+                $fullName = $user['name'] ?? 'RTC User';
+                $phone = $detail['phone_number'] ?? '';
+                $emailId = $user['email'] ?? $email;
+
+                // ✅ Upsert student
+                $check = $dbh->prepare("SELECT StudentId FROM tblstudents WHERE EmailId = :email");
+                $check->bindParam(':email', $emailId);
+                $check->execute();
+
+                if ($check->rowCount() > 0) {
+                    $update = $dbh->prepare("
+                        UPDATE tblstudents 
+                        SET FullName = :name, MobileNumber = :mobile, Status = 1 
+                        WHERE EmailId = :email
+                    ");
+                    $update->bindParam(':name', $fullName);
+                    $update->bindParam(':mobile', $phone);
+                    $update->bindParam(':email', $emailId);
+                    $update->execute();
+                } else {
+                    $insert = $dbh->prepare("
+                        INSERT INTO tblstudents (StudentId, FullName, EmailId, MobileNumber, Password, Status)
+                        VALUES (:id, :name, :email, :mobile, :password, 1)
+                    ");
+                    $insert->bindParam(':id', $studentId);
+                    $insert->bindParam(':name', $fullName);
+                    $insert->bindParam(':email', $emailId);
+                    $insert->bindParam(':mobile', $phone);
+                    $insert->bindValue(':password', md5($password));
+                    $insert->execute();
+                }
+
+                // ✅ Set session & cookie
+                $_SESSION['stdid'] = $studentId;
+                $_SESSION['login'] = $emailId;
+                $_SESSION['token_external'] = $token;
+                $_SESSION['username'] = $fullName;
+
+                setcookie('access_token', $token, time() + 3600, '/', '.camai.kh', true, true);
+
+                header("Location: dashboard.php");
+                exit;
             }
         }
-
-        if ($user) {
-            $studentId = $user['user_detail']['id_card'] ?? null;
-            $fullName  = $user['user_detail']['latin_name'] ?? ($user['first_name'] ?? 'Unknown');
-            $phone     = $user['user_detail']['phone_number'] ?? '';
-            $emailId   = $user['email'] ?? $email;
-
-            // ✅ Upsert student in library DB
-            $checkUser = $dbh->prepare("SELECT StudentId FROM tblstudents WHERE EmailId = :email");
-            $checkUser->bindParam(':email', $emailId);
-            $checkUser->execute();
-
-            if ($checkUser->rowCount() > 0) {
-                $updateUser = $dbh->prepare("
-                    UPDATE tblstudents 
-                    SET FullName = :name, MobileNumber = :mobile, Status = 1 
-                    WHERE EmailId = :email
-                ");
-                $updateUser->bindParam(':name', $fullName);
-                $updateUser->bindParam(':mobile', $phone);
-                $updateUser->bindParam(':email', $emailId);
-                $updateUser->execute();
-            } else {
-                $insertUser = $dbh->prepare("
-                    INSERT INTO tblstudents (StudentId, FullName, EmailId, MobileNumber, Password, Status)
-                    VALUES (:id, :name, :email, :mobile, :password, 1)
-                ");
-                $insertUser->bindParam(':id', $studentId);
-                $insertUser->bindParam(':name', $fullName);
-                $insertUser->bindParam(':email', $emailId);
-                $insertUser->bindParam(':mobile', $phone);
-                $insertUser->bindValue(':password', md5($password));
-                $insertUser->execute();
-            }
-
-            // ✅ Set login session
-            $_SESSION['stdid'] = $studentId;
-            $_SESSION['login'] = $emailId;
-            $_SESSION['token_external'] = $token;
-            $_SESSION['username'] = $fullName;
-
-            // ✅ Also set cookie to share session (SSO)
-            setcookie('access_token', $token, time() + 3600, '/', '.camai.kh', false, true);
-
-            header("Location: dashboard.php");
-            exit;
-        } else {
-            $_SESSION['toast'] = ['type' => 'danger', 'message' => 'Failed to fetch user details from RTC.'];
-        }
+        $_SESSION['toast'] = ['type' => 'danger', 'message' => 'Failed to fetch user info from RTC.'];
     } else {
-        $msg = $result['message'] ?? "External login failed (HTTP $statusCode)";
-        $_SESSION['toast'] = ['type' => 'danger', 'message' => $msg];
+        $_SESSION['toast'] = ['type' => 'danger', 'message' => 'Invalid credentials or API error.'];
     }
 }
 ?>
