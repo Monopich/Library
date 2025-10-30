@@ -1,186 +1,156 @@
 <?php
 session_start();
 include('includes/config.php');
-$debugFile = __DIR__ . '/sso_debug.log';
 
-function log_debug($msg) {
-    global $debugFile;
-    file_put_contents($debugFile, "[".date('Y-m-d H:i:s')."] $msg\n", FILE_APPEND);
-}
-
-log_debug("⚡ Page load started");
-
-// 1️⃣ Already logged in locally? redirect
-if (!empty($_SESSION['login']) || !empty($_SESSION['alogin'])) {
-    log_debug("✅ User already logged in locally: " . ($_SESSION['login'] ?? $_SESSION['alogin']));
+// 1️⃣ Already logged in? Redirect immediately to dashboard
+if (!empty($_SESSION['login'])) {
     header('Location: dashboard.php');
     exit;
 }
 
-// 2️⃣ Check RTC access token cookie
-$token = $_COOKIE['access_token'] ?? null;
+// 2️⃣ RTC token exists? Try auto-login
+if (isset($_COOKIE['access_token'])) {
+    $token = $_COOKIE['access_token'];
 
-if ($token) {
-    log_debug("🪪 Access token found: $token");
-    try {
-        $apiUrl = "https://api.rtc-bb.camai.kh/api/auth/get_detail_user";
-        $ch = curl_init($apiUrl);
-        curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_HTTPHEADER => [
-                "Authorization: Bearer $token",
-                "Accept: application/json"
-            ],
-            CURLOPT_SSL_VERIFYPEER => false,
-            CURLOPT_TIMEOUT => 10
-        ]);
-        $response = curl_exec($ch);
-        if ($response === false) throw new Exception(curl_error($ch));
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
+    $ch = curl_init("https://api.rtc-bb.camai.kh/api/auth/get_detail_user");
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        "Authorization: Bearer $token"
+    ]);
+    $response = curl_exec($ch);
+    curl_close($ch);
 
-        log_debug("RTC API HTTP Code: $httpCode, Response: $response");
+    $user = json_decode($response, true);
 
-        if ($httpCode === 200) {
-            $userData = json_decode($response, true);
-            $user = $userData['user'] ?? null;
-            if (!$user) throw new Exception("No user data returned");
-
-            $detail = $user['user_detail'] ?? [];
-            $_SESSION['login'] = $user['email'] ?? '';
-            $_SESSION['stdid'] = $detail['id_card'] ?? $user['id'];
-            $_SESSION['username'] = $user['name'] ?? 'RTC User';
-            $_SESSION['token_external'] = $token;
-
-            log_debug("✅ Auto-login success for: " . $_SESSION['login']);
-
-            // Make sure cookie is set for cross-subdomain (optional)
-            setcookie('access_token', $token, time() + 3600, '/', '.camai.kh', true, true);
-
-            header('Location: dashboard.php');
-            exit;
-        } else {
-            log_debug("❌ Invalid token or HTTP $httpCode");
-        }
-    } catch (Exception $e) {
-        log_debug("❌ RTC auto-login failed: " . $e->getMessage());
+    if (isset($user['user']['id'])) {
+        $_SESSION['login'] = true;
+        $_SESSION['stdid'] = $user['user']['user_detail']['id_card']; // student ID
+        $_SESSION['username'] = $user['user']['name']; // full name
+        $_SESSION['roles'] = $user['user']['roles'] ?? ['Student'];
+        
+        header('Location: dashboard.php');
+        exit;
     }
-} else {
-    log_debug("⚠️ No access_token cookie found");
 }
 
-// ✅ 3️⃣ Manual login (local or RTC)
 if (isset($_POST['login'])) {
     $email = trim($_POST['emailid']);
     $password = $_POST['password'];
 
-    // --- Local Admin Login ---
+    // 1️⃣ Local admin login
     $sqlAdmin = "SELECT UserName, Password FROM admin WHERE UserName = :email";
     $queryAdmin = $dbh->prepare($sqlAdmin);
     $queryAdmin->bindParam(':email', $email, PDO::PARAM_STR);
     $queryAdmin->execute();
-    $admin = $queryAdmin->fetch(PDO::FETCH_OBJ);
+    $adminResult = $queryAdmin->fetch(PDO::FETCH_OBJ);
 
-    if ($admin && $admin->Password === md5($password)) {
+    if ($adminResult && $adminResult->Password === md5($password)) {
         $_SESSION['alogin'] = $email;
         header("Location: admin/dashboard.php");
         exit;
     }
 
-    // --- RTC API Login ---
-    $loginUrl = "https://api.rtc-bb.camai.kh/api/auth/login";
+    // 2️⃣ External API login
+    $apiLoginUrl = "https://api.rtc-bb.camai.kh/api/auth/login";
     $payload = json_encode(['email' => $email, 'password' => $password]);
 
-    $ch = curl_init($loginUrl);
+    $ch = curl_init($apiLoginUrl);
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_POST => true,
         CURLOPT_POSTFIELDS => $payload,
         CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
-        CURLOPT_SSL_VERIFYPEER => false,
+        CURLOPT_SSL_VERIFYPEER => false
     ]);
     $response = curl_exec($ch);
-    $status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    $error = curl_error($ch);
+    $statusCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curlError = curl_error($ch);
     curl_close($ch);
 
-    if ($error) {
-        $_SESSION['toast'] = ['type' => 'danger', 'message' => "Network Error: $error"];
+    if ($curlError) {
+        $_SESSION['toast'] = ['type' => 'danger', 'message' => "cURL Error: $curlError"];
         header("Location: index.php");
         exit;
     }
 
     $result = json_decode($response, true);
+    @file_put_contents(__DIR__.'/api_debug.log', "Login response:\n" . print_r($result, true), FILE_APPEND);
+
     $token = $result['token'] ?? $result['access_token'] ?? ($result['data']['token'] ?? null);
 
-    if ($status === 200 && $token) {
-        // Fetch RTC user details
-        $ch = curl_init("https://api.rtc-bb.camai.kh/api/auth/get_detail_user");
-        curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_HTTPHEADER => [
-                'Authorization: Bearer ' . $token,
-                'Accept: application/json'
-            ],
-            CURLOPT_SSL_VERIFYPEER => false,
-        ]);
-        $userResponse = curl_exec($ch);
-        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
+    if ($statusCode === 200 && $token) {
+        $detailEndpoints = [
+            "https://api.rtc-bb.camai.kh/api/auth/get_detail_user",
+            "https://api.rtc-bb.camai.kh/api/auth/me",
+            "https://api.rtc-bb.camai.kh/api/user/me"
+        ];
 
-        if ($code === 200) {
+        $user = null;
+        foreach ($detailEndpoints as $url) {
+            $ch = curl_init($url);
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_HTTPHEADER => [
+                    'Authorization: Bearer ' . $token,
+                    'Accept: application/json'
+                ],
+                CURLOPT_SSL_VERIFYPEER => false
+            ]);
+            $userResponse = curl_exec($ch);
+            $detailStatus = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+
             $userData = json_decode($userResponse, true);
-            $user = $userData['user'] ?? null;
-            if ($user) {
-                $detail = $user['user_detail'] ?? [];
-                $studentId = $detail['id_card'] ?? $user['id'];
-                $fullName = $user['name'] ?? 'RTC User';
-                $phone = $detail['phone_number'] ?? '';
-                $emailId = $user['email'] ?? $email;
+            @file_put_contents(__DIR__.'/api_debug.log', "User response from $url:\n" . print_r($userData, true), FILE_APPEND);
 
-                // ✅ Upsert student
-                $check = $dbh->prepare("SELECT StudentId FROM tblstudents WHERE EmailId = :email");
-                $check->bindParam(':email', $emailId);
-                $check->execute();
-
-                if ($check->rowCount() > 0) {
-                    $update = $dbh->prepare("
-                        UPDATE tblstudents 
-                        SET FullName = :name, MobileNumber = :mobile, Status = 1 
-                        WHERE EmailId = :email
-                    ");
-                    $update->bindParam(':name', $fullName);
-                    $update->bindParam(':mobile', $phone);
-                    $update->bindParam(':email', $emailId);
-                    $update->execute();
-                } else {
-                    $insert = $dbh->prepare("
-                        INSERT INTO tblstudents (StudentId, FullName, EmailId, MobileNumber, Password, Status)
-                        VALUES (:id, :name, :email, :mobile, :password, 1)
-                    ");
-                    $insert->bindParam(':id', $studentId);
-                    $insert->bindParam(':name', $fullName);
-                    $insert->bindParam(':email', $emailId);
-                    $insert->bindParam(':mobile', $phone);
-                    $insert->bindValue(':password', md5($password));
-                    $insert->execute();
-                }
-
-                // ✅ Set session & cookie
-                $_SESSION['stdid'] = $studentId;
-                $_SESSION['login'] = $emailId;
-                $_SESSION['token_external'] = $token;
-                $_SESSION['username'] = $fullName;
-
-                setcookie('access_token', $token, time() + 3600, '/', '.camai.kh', true, true);
-
-                header("Location: dashboard.php");
-                exit;
+            if ($detailStatus === 200 && !empty($userData)) {
+                $user = $userData['data'] ?? $userData['user'] ?? null;
+                break;
             }
         }
-        $_SESSION['toast'] = ['type' => 'danger', 'message' => 'Failed to fetch user info from RTC.'];
+
+        if ($user) {
+            $studentId = $user['user_detail']['id_card'] ?? null;
+            $fullName = $user['user_detail']['latin_name'] ?? ($user['first_name'] ?? 'Unknown');
+            $phoneNumber = $user['user_detail']['phone_number'] ?? '';
+            $emailId = $user['email'] ?? $email;
+
+            $checkUser = $dbh->prepare("SELECT StudentId FROM tblstudents WHERE EmailId = :email");
+            $checkUser->bindParam(':email', $emailId);
+            $checkUser->execute();
+
+            if ($checkUser->rowCount() > 0) {
+                $updateUser = $dbh->prepare("UPDATE tblstudents SET FullName = :name, MobileNumber = :mobile, Status = 1 WHERE EmailId = :email");
+                $updateUser->bindParam(':name', $fullName);
+                $updateUser->bindParam(':mobile', $phoneNumber);
+                $updateUser->bindParam(':email', $emailId);
+                $updateUser->execute();
+            } else {
+                $insertUser = $dbh->prepare("
+                    INSERT INTO tblstudents (StudentId, FullName, EmailId, MobileNumber, Password, Status)
+                    VALUES (:id, :name, :email, :mobile, :password, 1)
+                ");
+                $insertUser->bindParam(':id', $studentId);
+                $insertUser->bindParam(':name', $fullName);
+                $insertUser->bindParam(':email', $emailId);
+                $insertUser->bindParam(':mobile', $phoneNumber);
+                $insertUser->bindValue(':password', md5($password));
+                $insertUser->execute();
+            }
+
+            $_SESSION['stdid'] = $studentId;
+            $_SESSION['login'] = $emailId;
+            $_SESSION['token_external'] = $token;
+            $_SESSION['username'] = $fullName;
+
+            header("Location: dashboard.php");
+            exit;
+        } else {
+            $_SESSION['toast'] = ['type' => 'danger', 'message' => 'Failed to fetch user details from external system.'];
+        }
     } else {
-        $_SESSION['toast'] = ['type' => 'danger', 'message' => 'Invalid credentials or API error.'];
+        $msg = $result['message'] ?? "External login failed (HTTP $statusCode)";
+        $_SESSION['toast'] = ['type' => 'danger', 'message' => $msg];
     }
 }
 ?>
@@ -192,7 +162,7 @@ if (isset($_POST['login'])) {
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Library Management | Login</title>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
 <style>
 body {
     background: #f0f2f5;
@@ -220,10 +190,15 @@ body {
     margin-bottom: 25px;
     color: #1a3d7c;
 }
-.input-group .form-control {
-    border-radius: 8px !important;
-    padding-right: 40px;
+.input-group {
+    position: relative;
 }
+
+.input-group .form-control {
+    border-radius: 8px !important; /* Fully rounded */
+    padding-right: 40px; /* Space for the eye icon */
+}
+
 .input-group .toggle-password {
     position: absolute;
     top: 50%;
@@ -234,32 +209,32 @@ body {
     cursor: pointer;
     font-size: 1.1rem;
     color: #6c757d;
+    padding: 0;
+    margin: 0;
 }
+
 .btn-primary {
     width: 100%;
     border-radius: 8px;
     padding: 10px;
     font-weight: 500;
 }
-.btn-primary:hover {
-    background: #1a3d7c;
-}
-.small-link {
-    font-size: 0.875rem;
-    margin-top: 10px;
-    display: block;
-}
+.btn-primary:hover { background: #1a3d7c; }
+.small-link { font-size: 0.875rem; margin-top: 10px; display: block; }
 </style>
 </head>
 <body>
+
 <div class="login-card">
     <img src="assets/img/login-logo.png" alt="Library Logo" class="login-logo">
     <h3 class="login-title">Library Login</h3>
+
     <form method="post">
         <div class="mb-1 text-start">
             <label for="emailid" class="form-label">Email or Admin Username</label>
             <input type="text" class="form-control" name="emailid" id="emailid" required autocomplete="off">
         </div>
+
         <div class="mb-1 text-start">
             <label for="password" class="form-label">Password</label>
             <div class="input-group">
@@ -268,12 +243,12 @@ body {
             </div>
             <a href="user-forgot-password.php" class="small-link">Forgot password?</a>
         </div>
+
         <button type="submit" name="login" class="btn btn-primary mt-2">Login</button>
         <span class="small-link mt-3">Don't have an account? <a href="signup.php">Register here</a></span>
     </form>
 </div>
 
-<!-- Toast -->
 <div class="position-fixed top-0 end-0 p-3" style="z-index:1055">
   <div id="liveToast" class="toast align-items-center text-white border-0" role="alert">
     <div class="d-flex">
@@ -288,27 +263,30 @@ body {
 <?php
 if(isset($_SESSION['toast'])){
     $toast=$_SESSION['toast'];
-    $bg = match($toast['type']){
+    $bg=match($toast['type']){
         'success'=>'bg-success',
         'danger'=>'bg-danger',
         'warning'=>'bg-warning text-dark',
         'info'=>'bg-info text-dark',
         default=>'bg-secondary',
     };
-    echo "document.addEventListener('DOMContentLoaded',()=>{const toastEl=document.getElementById('liveToast');const toastBody=document.getElementById('toast-message');toastEl.className='toast align-items-center border-0 $bg';toastBody.textContent='".addslashes($toast['message'])."';new bootstrap.Toast(toastEl).show();});";
+    echo "document.addEventListener('DOMContentLoaded',()=>{const toastEl=document.getElementById('liveToast');const toastBody=document.getElementById('toast-message');toastEl.className='toast align-items-center border-0 $bg';toastBody.textContent='{$toast['message']}';new bootstrap.Toast(toastEl).show();});";
     unset($_SESSION['toast']);
 }
 ?>
 
+// Toggle password visibility
 document.getElementById('togglePassword').addEventListener('click', function(){
     const pw = document.getElementById('password');
     const icon = this.querySelector('i');
-    if (pw.type === 'password') {
+    if(pw.type === 'password'){
         pw.type = 'text';
-        icon.classList.replace('bi-eye', 'bi-eye-slash');
-    } else {
+        icon.classList.remove('bi-eye');
+        icon.classList.add('bi-eye-slash');
+    }else{
         pw.type = 'password';
-        icon.classList.replace('bi-eye-slash', 'bi-eye');
+        icon.classList.remove('bi-eye-slash');
+        icon.classList.add('bi-eye');
     }
 });
 </script>
