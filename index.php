@@ -10,19 +10,18 @@ function log_debug($msg) {
 
 log_debug("⚡ Page load started");
 
-// 1️⃣ Already logged in?
+// 1️⃣ Already logged in locally? redirect
 if (!empty($_SESSION['login']) || !empty($_SESSION['alogin'])) {
-    log_debug("✅ User already logged in: " . ($_SESSION['login'] ?? $_SESSION['alogin']));
+    log_debug("✅ User already logged in locally: " . ($_SESSION['login'] ?? $_SESSION['alogin']));
     header('Location: dashboard.php');
     exit;
 }
 
-// 2️⃣ Check for RTC access token cookie
+// 2️⃣ Check RTC access token cookie
 $token = $_COOKIE['access_token'] ?? null;
 
 if ($token) {
     log_debug("🪪 Access token found: $token");
-
     try {
         $apiUrl = "https://api.rtc-bb.camai.kh/api/auth/get_detail_user";
         $ch = curl_init($apiUrl);
@@ -36,41 +35,35 @@ if ($token) {
             CURLOPT_TIMEOUT => 10
         ]);
         $response = curl_exec($ch);
-        if ($response === false) {
-            throw new Exception('cURL error: ' . curl_error($ch));
-        }
+        if ($response === false) throw new Exception(curl_error($ch));
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
 
         log_debug("RTC API HTTP Code: $httpCode, Response: $response");
 
-        if ($httpCode !== 200) {
-            throw new Exception("Invalid token or HTTP $httpCode");
+        if ($httpCode === 200) {
+            $userData = json_decode($response, true);
+            $user = $userData['user'] ?? null;
+            if (!$user) throw new Exception("No user data returned");
+
+            $detail = $user['user_detail'] ?? [];
+            $_SESSION['login'] = $user['email'] ?? '';
+            $_SESSION['stdid'] = $detail['id_card'] ?? $user['id'];
+            $_SESSION['username'] = $user['name'] ?? 'RTC User';
+            $_SESSION['token_external'] = $token;
+
+            log_debug("✅ Auto-login success for: " . $_SESSION['login']);
+
+            // Make sure cookie is set for cross-subdomain (optional)
+            setcookie('access_token', $token, time() + 3600, '/', '.camai.kh', true, true);
+
+            header('Location: dashboard.php');
+            exit;
+        } else {
+            log_debug("❌ Invalid token or HTTP $httpCode");
         }
-
-        $userData = json_decode($response, true);
-        if (empty($userData['user']['email'])) {
-            throw new Exception("User data missing from RTC response");
-        }
-
-        $user = $userData['user'];
-        $detail = $user['user_detail'] ?? [];
-
-        $_SESSION['login'] = $user['email'];
-        $_SESSION['stdid'] = $detail['id_card'] ?? $user['id'];
-        $_SESSION['username'] = $user['name'] ?? 'RTC User';
-        $_SESSION['token_external'] = $token;
-
-        log_debug("✅ Auto-login success for: " . $_SESSION['login']);
-        header('Location: dashboard.php');
-        exit;
-
     } catch (Exception $e) {
         log_debug("❌ RTC auto-login failed: " . $e->getMessage());
-        $_SESSION['toast'] = [
-            'type' => 'danger',
-            'message' => 'Auto-login failed: ' . $e->getMessage()
-        ];
     }
 } else {
     log_debug("⚠️ No access_token cookie found");
