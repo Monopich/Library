@@ -1,4 +1,7 @@
 <?php
+session_name('rtc_session');
+ini_set('session.cookie_domain', '.rtc-bb.camai.kh'); // note the leading dot for subdomains
+ini_set('session.cookie_path', '/');
 session_start();
 include('includes/config.php');
 
@@ -8,28 +11,30 @@ if (!empty($_SESSION['login'])) {
     exit;
 }
 
-// 2️⃣ RTC token exists? Try auto-login
+// Auto-login from RTC token
 if (isset($_COOKIE['access_token'])) {
     $token = $_COOKIE['access_token'];
 
-    $ch = curl_init("https://api.rtc-bb.camai.kh/api/auth/get_detail_user");
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, [
-        "Authorization: Bearer $token"
-    ]);
-    $response = curl_exec($ch);
-    curl_close($ch);
+    try {
+        $ch = curl_init("https://api.rtc-bb.camai.kh/api/auth/get_detail_user");
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, ["Authorization: Bearer $token"]);
+        $response = curl_exec($ch);
+        curl_close($ch);
 
-    $user = json_decode($response, true);
+        $user = json_decode($response, true);
 
-    if (isset($user['user']['id'])) {
-        $_SESSION['login'] = true;
-        $_SESSION['stdid'] = $user['user']['user_detail']['id_card']; // student ID
-        $_SESSION['username'] = $user['user']['name']; // full name
-        $_SESSION['roles'] = $user['user']['roles'] ?? ['Student'];
-        
-        header('Location: dashboard.php');
-        exit;
+        if (!empty($user['user']['id'])) {
+            $_SESSION['login'] = true;
+            $_SESSION['stdid'] = $user['user']['user_detail']['id_card'];
+            $_SESSION['username'] = $user['user']['name'];
+            $_SESSION['roles'] = $user['user']['roles'] ?? ['Student'];
+
+            header('Location: dashboard.php');
+            exit;
+        }
+    } catch (Exception $e) {
+        error_log("RTC auto-login failed: " . $e->getMessage());
     }
 }
 
