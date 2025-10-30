@@ -33,36 +33,77 @@ function rtcAutoLogin($token, $dbh) {
             throw new Exception("Invalid token or user not found");
         }
 
-        // Create Library session
+        $userData = $user['user'];
+        $email = $userData['email'];
+        $studentId = $userData['user_detail']['id_card'] ?? null;
+        $fullName = $userData['user_detail']['latin_name'] ?? ($userData['name'] ?? 'Unknown');
+        $phoneNumber = $userData['user_detail']['phone_number'] ?? '';
+
+        // Find or create user in local database
+        $checkUser = $dbh->prepare("SELECT StudentId, EmailId FROM tblstudents WHERE EmailId = :email");
+        $checkUser->bindParam(':email', $email);
+        $checkUser->execute();
+
+        if ($checkUser->rowCount() > 0) {
+            // Update existing user
+            $existingUser = $checkUser->fetch(PDO::FETCH_OBJ);
+            $updateUser = $dbh->prepare("UPDATE tblstudents SET FullName = :name, MobileNumber = :mobile, Status = 1 WHERE EmailId = :email");
+            $updateUser->bindParam(':name', $fullName);
+            $updateUser->bindParam(':mobile', $phoneNumber);
+            $updateUser->bindParam(':email', $email);
+            $updateUser->execute();
+            $studentId = $existingUser->StudentId; // Use existing StudentId
+        } else {
+            // Create new user with a generated password
+            $insertUser = $dbh->prepare("
+                INSERT INTO tblstudents (StudentId, FullName, EmailId, MobileNumber, Password, Status)
+                VALUES (:id, :name, :email, :mobile, :password, 1)
+            ");
+            $defaultPassword = md5(uniqid()); // Random password since we're using token auth
+            $insertUser->bindParam(':id', $studentId);
+            $insertUser->bindParam(':name', $fullName);
+            $insertUser->bindParam(':email', $email);
+            $insertUser->bindParam(':mobile', $phoneNumber);
+            $insertUser->bindValue(':password', $defaultPassword);
+            $insertUser->execute();
+        }
+
+        // Create Library session (Auth.login equivalent)
         $_SESSION['login'] = true;
-        $_SESSION['stdid'] = $user['user']['user_detail']['id_card'];
-        $_SESSION['username'] = $user['user']['name'];
-        $_SESSION['roles'] = $user['user']['roles'] ?? ['Student'];
+        $_SESSION['stdid'] = $studentId;
+        $_SESSION['username'] = $fullName;
+        $_SESSION['email'] = $email;
+        $_SESSION['roles'] = $userData['roles'] ?? ['Student'];
+        $_SESSION['token_external'] = $token;
 
         log_debug("✅ RTC auto-login successful for user: " . $_SESSION['username']);
-        header('Location: dashboard.php');
-        exit;
+        return true;
 
     } catch (Exception $e) {
         log_debug("⚠️ RTC auto-login error: " . $e->getMessage());
-        $_SESSION['toast'] = ['type' => 'danger', 'message' => 'RTC auto-login failed: ' . $e->getMessage()];
+        $_SESSION['toast'] = ['type' => 'danger', 'message' => 'Auto-login failed: ' . $e->getMessage()];
+        return false;
     }
 }
 
-// 1️⃣ Already logged in locally?
+// 1️⃣ Check if user is already logged in locally
 if (!empty($_SESSION['login'])) {
     log_debug("User already logged in, redirecting to dashboard.");
     header('Location: dashboard.php');
     exit;
 }
 
-// 2️⃣ Check token from GET/POST
+// 2️⃣ Check for token from GET/POST for auto-login
 $token = $_GET['token'] ?? $_POST['token'] ?? null;
 if ($token) {
-    log_debug("Token received: $token");
-    rtcAutoLogin($token, $dbh);
+    log_debug("Token received for auto-login: $token");
+    if (rtcAutoLogin($token, $dbh)) {
+        header('Location: dashboard.php');
+        exit;
+    }
 }
 
+// 3️⃣ Handle manual form login
 if (isset($_POST['login'])) {
     $email = trim($_POST['emailid']);
     $password = $_POST['password'];
@@ -104,79 +145,17 @@ if (isset($_POST['login'])) {
     }
 
     $result = json_decode($response, true);
-    @file_put_contents(__DIR__.'/api_debug.log', "Login response:\n" . print_r($result, true), FILE_APPEND);
+    log_debug("Login response: " . print_r($result, true));
 
     $token = $result['token'] ?? $result['access_token'] ?? ($result['data']['token'] ?? null);
 
     if ($statusCode === 200 && $token) {
-        $detailEndpoints = [
-            "https://api.rtc-bb.camai.kh/api/auth/get_detail_user",
-            "https://api.rtc-bb.camai.kh/api/auth/me",
-            "https://api.rtc-bb.camai.kh/api/user/me"
-        ];
-
-        $user = null;
-        foreach ($detailEndpoints as $url) {
-            $ch = curl_init($url);
-            curl_setopt_array($ch, [
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_HTTPHEADER => [
-                    'Authorization: Bearer ' . $token,
-                    'Accept: application/json'
-                ],
-                CURLOPT_SSL_VERIFYPEER => false
-            ]);
-            $userResponse = curl_exec($ch);
-            $detailStatus = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            curl_close($ch);
-
-            $userData = json_decode($userResponse, true);
-            @file_put_contents(__DIR__.'/api_debug.log', "User response from $url:\n" . print_r($userData, true), FILE_APPEND);
-
-            if ($detailStatus === 200 && !empty($userData)) {
-                $user = $userData['data'] ?? $userData['user'] ?? null;
-                break;
-            }
-        }
-
-        if ($user) {
-            $studentId = $user['user_detail']['id_card'] ?? null;
-            $fullName = $user['user_detail']['latin_name'] ?? ($user['first_name'] ?? 'Unknown');
-            $phoneNumber = $user['user_detail']['phone_number'] ?? '';
-            $emailId = $user['email'] ?? $email;
-
-            $checkUser = $dbh->prepare("SELECT StudentId FROM tblstudents WHERE EmailId = :email");
-            $checkUser->bindParam(':email', $emailId);
-            $checkUser->execute();
-
-            if ($checkUser->rowCount() > 0) {
-                $updateUser = $dbh->prepare("UPDATE tblstudents SET FullName = :name, MobileNumber = :mobile, Status = 1 WHERE EmailId = :email");
-                $updateUser->bindParam(':name', $fullName);
-                $updateUser->bindParam(':mobile', $phoneNumber);
-                $updateUser->bindParam(':email', $emailId);
-                $updateUser->execute();
-            } else {
-                $insertUser = $dbh->prepare("
-                    INSERT INTO tblstudents (StudentId, FullName, EmailId, MobileNumber, Password, Status)
-                    VALUES (:id, :name, :email, :mobile, :password, 1)
-                ");
-                $insertUser->bindParam(':id', $studentId);
-                $insertUser->bindParam(':name', $fullName);
-                $insertUser->bindParam(':email', $emailId);
-                $insertUser->bindParam(':mobile', $phoneNumber);
-                $insertUser->bindValue(':password', md5($password));
-                $insertUser->execute();
-            }
-
-            $_SESSION['stdid'] = $studentId;
-            $_SESSION['login'] = $emailId;
-            $_SESSION['token_external'] = $token;
-            $_SESSION['username'] = $fullName;
-
+        // Use the token to get user details (same as auto-login flow)
+        if (rtcAutoLogin($token, $dbh)) {
             header("Location: dashboard.php");
             exit;
         } else {
-            $_SESSION['toast'] = ['type' => 'danger', 'message' => 'Failed to fetch user details from external system.'];
+            $_SESSION['toast'] = ['type' => 'danger', 'message' => 'Login successful but failed to create local session.'];
         }
     } else {
         $msg = $result['message'] ?? "External login failed (HTTP $statusCode)";
@@ -225,8 +204,8 @@ body {
 }
 
 .input-group .form-control {
-    border-radius: 8px !important; /* Fully rounded */
-    padding-right: 40px; /* Space for the eye icon */
+    border-radius: 8px !important;
+    padding-right: 40px;
 }
 
 .input-group .toggle-password {
