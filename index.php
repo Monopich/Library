@@ -12,8 +12,7 @@ if (!empty($_SESSION['login']) || !empty($_SESSION['alogin'])) {
 // ✅ 2️⃣ RTC token exists? Try auto-login using SSO
 if (!empty($_COOKIE['access_token'])) {
     $token = $_COOKIE['access_token'];
-    error_log("🪪 Library SSO Token: " . $token);
-    file_put_contents($debugFile, "[".date('Y-m-d H:i:s')."] 🪪 Token: ".$_COOKIE['access_token']."\n", FILE_APPEND);
+    file_put_contents($debugFile, "[".date('Y-m-d H:i:s')."] 🪪 SSO Token: " . $token . "\n", FILE_APPEND);
 
     try {
         $apiUrl = "https://api.rtc-bb.camai.kh/api/auth/get_detail_user";
@@ -98,6 +97,8 @@ if (!empty($_COOKIE['access_token'])) {
             'message' => 'Auto-login failed: ' . $e->getMessage()
         ];
     }
+} else {
+    file_put_contents($debugFile, "[".date('Y-m-d H:i:s')."] ⚠️ No access_token cookie found\n", FILE_APPEND);
 }
 
 // ✅ 3️⃣ Manual login (local or RTC)
