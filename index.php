@@ -1,6 +1,7 @@
 <?php
 session_start();
 include('includes/config.php');
+$debugFile = __DIR__ . '/sso_debug.log';
 
 // ✅ 1️⃣ Already logged in? Redirect to dashboard immediately
 if (!empty($_SESSION['login']) || !empty($_SESSION['alogin'])) {
@@ -12,6 +13,7 @@ if (!empty($_SESSION['login']) || !empty($_SESSION['alogin'])) {
 if (!empty($_COOKIE['access_token'])) {
     $token = $_COOKIE['access_token'];
     error_log("🪪 Library SSO Token: " . $token);
+    file_put_contents($debugFile, "[".date('Y-m-d H:i:s')."] 🪪 Token: ".$_COOKIE['access_token']."\n", FILE_APPEND);
 
     try {
         $apiUrl = "https://api.rtc-bb.camai.kh/api/auth/get_detail_user";
