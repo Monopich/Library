@@ -1,11 +1,8 @@
 <?php
 // ------------------------
-// Library index.php SSO with debug logging
+// Library index.php - Token-based auto-login (no cookies)
 // ------------------------
 
-session_name('rtc_session'); // Shared session name
-ini_set('session.cookie_domain', '.rtc-bb.camai.kh'); // Make session cookie valid across subdomains
-ini_set('session.cookie_path', '/');
 session_start();
 
 include('includes/config.php');
@@ -36,14 +33,14 @@ if (!empty($_SESSION['login'])) {
 }
 
 // ------------------------
-// 2️⃣ Auto-login using RTC token
+// 2️⃣ Auto-login using token from URL
 // ------------------------
-if (!empty($_COOKIE['access_token'])) {
-    $token = $_COOKIE['access_token'];
-    log_debug("Found access_token cookie: $token");
+if (!empty($_GET['access_token'])) {
+    $token = $_GET['access_token'];
+    log_debug("Found access_token via URL: $token");
 
     try {
-        $ch = curl_init("https://api.rtc-bb.camai.kh/api/auth/get_detail_user");
+        $ch = curl_init("https://rtc-bb.camai.kh/api/auth/get_detail_user");
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_HTTPHEADER => ["Authorization: Bearer $token"],
@@ -68,7 +65,7 @@ if (!empty($_COOKIE['access_token'])) {
                 $_SESSION['username'] = $user['user']['name'] ?? 'Unknown';
                 $_SESSION['roles'] = $user['user']['roles'] ?? ['Student'];
 
-                log_debug("RTC SSO successful. Redirecting to dashboard.");
+                log_debug("Token-based login successful. Redirecting to dashboard.");
                 header('Location: dashboard.php');
                 exit;
             } else {
@@ -78,10 +75,10 @@ if (!empty($_COOKIE['access_token'])) {
             log_debug("RTC API call failed or returned non-200 HTTP code.");
         }
     } catch (Exception $e) {
-        log_debug("RTC auto-login exception: " . $e->getMessage());
+        log_debug("Token-based auto-login exception: " . $e->getMessage());
     }
 } else {
-    log_debug("No access_token cookie found. User will see login page.");
+    log_debug("No access_token in URL. User will see login page.");
 }
 
 // ------------------------
@@ -112,7 +109,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
     }
 }
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
