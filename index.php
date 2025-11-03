@@ -10,6 +10,83 @@ function log_debug($msg) {
 
 log_debug("=== Library login page loaded ===");
 
+// ✅ Auto-login using RTC token
+function rtcAutoLogin($token, $dbh) {
+    log_debug("⚡ Starting RTC auto-login with token: $token");
+
+    try {
+        $ch = curl_init("https://api.rtc-bb.camai.kh/api/auth/get_detail_user");
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HTTPHEADER => ["Authorization: Bearer $token"],
+            CURLOPT_SSL_VERIFYPEER => false,
+        ]);
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        log_debug("RTC API response code: $httpCode");
+        log_debug("RTC API response: $response");
+
+        if ($httpCode !== 200 || !$response) {
+            throw new Exception("Invalid token or failed to reach RTC API");
+        }
+
+        $data = json_decode($response, true);
+        if (!isset($data['user'])) {
+            throw new Exception("Invalid response: missing user data");
+        }
+
+        $user = $data['user'];
+        $email = $user['email'];
+        $studentId = $user['user_detail']['id_card'] ?? uniqid('rtc_');
+        $fullName = $user['user_detail']['latin_name'] ?? ($user['name'] ?? 'Unknown');
+        $phone = $user['user_detail']['phone_number'] ?? '';
+
+        // ✅ Check existing user
+        $checkUser = $dbh->prepare("SELECT StudentId FROM tblstudents WHERE EmailId = :email");
+        $checkUser->bindParam(':email', $email);
+        $checkUser->execute();
+
+        if ($checkUser->rowCount() > 0) {
+            // Update existing user
+            $update = $dbh->prepare("
+                UPDATE tblstudents SET FullName = :name, MobileNumber = :mobile, Status = 1 WHERE EmailId = :email
+            ");
+            $update->execute([':name' => $fullName, ':mobile' => $phone, ':email' => $email]);
+        } else {
+            // Create new user
+            $insert = $dbh->prepare("
+                INSERT INTO tblstudents (StudentId, FullName, EmailId, MobileNumber, Password, Status)
+                VALUES (:id, :name, :email, :mobile, :password, 1)
+            ");
+            $defaultPassword = md5(uniqid());
+            $insert->execute([
+                ':id' => $studentId,
+                ':name' => $fullName,
+                ':email' => $email,
+                ':mobile' => $phone,
+                ':password' => $defaultPassword,
+            ]);
+        }
+
+        // ✅ Set library session
+        $_SESSION['login'] = true;
+        $_SESSION['stdid'] = $studentId;
+        $_SESSION['username'] = $fullName;
+        $_SESSION['email'] = $email;
+        $_SESSION['roles'] = $user['roles'] ?? ['Student'];
+        $_SESSION['rtc_token'] = $token;
+
+        log_debug("✅ Auto-login success for user: $fullName ($email)");
+        return true;
+
+    } catch (Exception $e) {
+        log_debug("⚠️ Auto-login failed: " . $e->getMessage());
+        return false;
+    }
+}
+
 // ✅ 1. If already logged in, redirect
 if (!empty($_SESSION['login'])) {
     log_debug("Already logged in, redirecting to dashboard.");
@@ -17,44 +94,24 @@ if (!empty($_SESSION['login'])) {
     exit;
 }
 
-// ✅ 2. Check if token passed from RTC system (auto-login)
-if (!empty($_GET['token'])) {
-    $token = $_GET['token'];
+// ✅ 2. Check if token passed from bridge page (GET/POST) - FIXED TO HANDLE URL DECODING
+if (!empty($_GET['token']) || !empty($_POST['token'])) {
+    $token = $_GET['token'] ?? $_POST['token'];
+    
+    // ✅ DECODE URL-ENCODED TOKEN
     $token = urldecode($token);
-    log_debug("Token received from RTC: " . substr($token, 0, 20) . "...");
+    log_debug("Token received for auto-login: $token");
 
     if (rtcAutoLogin($token, $dbh)) {
-        log_debug("✅ Auto-login successful, redirecting to dashboard");
+        log_debug("Auto-login successful, redirecting to dashboard");
         header("Location: dashboard.php");
         exit;
     } else {
         $_SESSION['toast'] = ['type' => 'danger', 'message' => 'Auto-login failed. Please login manually.'];
-        log_debug("❌ Auto-login failed");
+        log_debug("Auto-login failed, showing manual login");
     }
 }
 
-// ✅ 3. If no token in URL, show JavaScript checker
-if (empty($_GET['token']) && empty($_SESSION['login'])) {
-    echo "
-    <script>
-    console.log('🔍 Checking for RTC session...');
-    const urlParams = new URLSearchParams(window.location.search);
-    const tokenFromUrl = urlParams.get('token');
-    
-    if (tokenFromUrl) {
-        console.log('✅ Token found in URL, auto-login should happen');
-    } else {
-        console.log('❌ No token in URL, showing login form');
-        // Check localStorage for RTC session (same domain)
-        const rtcToken = localStorage.getItem('rtc_auth_token');
-        if (rtcToken) {
-            console.log('🔄 RTC session found in localStorage, redirecting...');
-            window.location.href = 'index.php?token=' + encodeURIComponent(rtcToken);
-        }
-    }
-    </script>
-    ";
-}
 
 // ✅ 3. Normal manual login (student/admin)
 if (isset($_POST['login'])) {
