@@ -10,160 +10,182 @@ function log_debug($msg) {
 
 log_debug("=== Library login page loaded ===");
 
-// ✅ Auto-login using RTC token
-function rtcAutoLogin($token, $dbh) {
-    log_debug("⚡ Starting RTC auto-login with token: $token");
+function rtcAutoLogin($token, $dbh = null) {
+    // Do not log the raw token. Log only a masked version for debugging.
+    $masked = substr($token, 0, 6) . '...' . substr($token, -4);
+    log_debug("rtcAutoLogin: attempting validation for token: {$masked}");
 
-    try {
-        $ch = curl_init("https://api.rtc-bb.camai.kh/api/auth/get_detail_user");
-        curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_HTTPHEADER => ["Authorization: Bearer $token"],
-            CURLOPT_SSL_VERIFYPEER => false,
-        ]);
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
+    $apiUrl = "https://api.rtc-bb.camai.kh/api/auth/get_detail_user";
 
-        log_debug("RTC API response code: $httpCode");
-        log_debug("RTC API response: $response");
+    $ch = curl_init($apiUrl);
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_HTTPHEADER => [
+            "Authorization: Bearer {$token}",
+            "Accept: application/json"
+        ],
+        CURLOPT_TIMEOUT => 10,
+        // In production, verify peer. Make sure your system has CA certs.
+        CURLOPT_SSL_VERIFYPEER => true,
+        CURLOPT_SSL_VERIFYHOST => 2,
+    ]);
 
-        if ($httpCode !== 200 || !$response) {
-            throw new Exception("Invalid token or failed to reach RTC API");
-        }
+    $response = curl_exec($ch);
+    $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curl_err = null;
+    if ($response === false) {
+        $curl_err = curl_error($ch);
+        log_debug("rtcAutoLogin: cURL error: " . $curl_err);
+    }
+    curl_close($ch);
 
-        $data = json_decode($response, true);
-        if (!isset($data['user'])) {
-            throw new Exception("Invalid response: missing user data");
-        }
-
-        $user = $data['user'];
-        $email = $user['email'];
-        $studentId = $user['user_detail']['id_card'] ?? uniqid('rtc_');
-        $fullName = $user['user_detail']['latin_name'] ?? ($user['name'] ?? 'Unknown');
-        $phone = $user['user_detail']['phone_number'] ?? '';
-
-        // ✅ Check existing user
-        $checkUser = $dbh->prepare("SELECT StudentId FROM tblstudents WHERE EmailId = :email");
-        $checkUser->bindParam(':email', $email);
-        $checkUser->execute();
-
-        if ($checkUser->rowCount() > 0) {
-            // Update existing user
-            $update = $dbh->prepare("
-                UPDATE tblstudents SET FullName = :name, MobileNumber = :mobile, Status = 1 WHERE EmailId = :email
-            ");
-            $update->execute([':name' => $fullName, ':mobile' => $phone, ':email' => $email]);
-        } else {
-            // Create new user
-            $insert = $dbh->prepare("
-                INSERT INTO tblstudents (StudentId, FullName, EmailId, MobileNumber, Password, Status)
-                VALUES (:id, :name, :email, :mobile, :password, 1)
-            ");
-            $defaultPassword = md5(uniqid());
-            $insert->execute([
-                ':id' => $studentId,
-                ':name' => $fullName,
-                ':email' => $email,
-                ':mobile' => $phone,
-                ':password' => $defaultPassword,
-            ]);
-        }
-
-        // ✅ Set library session
-        $_SESSION['login'] = true;
-        $_SESSION['stdid'] = $studentId;
-        $_SESSION['username'] = $fullName;
-        $_SESSION['email'] = $email;
-        $_SESSION['roles'] = $user['roles'] ?? ['Student'];
-        $_SESSION['rtc_token'] = $token;
-
-        log_debug("✅ Auto-login success for user: $fullName ($email)");
-        return true;
-
-    } catch (Exception $e) {
-        log_debug("⚠️ Auto-login failed: " . $e->getMessage());
+    if ($response === false) {
         return false;
     }
+
+    // decode response
+    $data = json_decode($response, true);
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        log_debug("rtcAutoLogin: JSON decode error: " . json_last_error_msg());
+        return false;
+    }
+
+    // Typical shape: ['status' => ..., 'data' => ['user' => [...]] ] or ['user' => ...]
+    $user = null;
+    if (!empty($data['data']['user'])) {
+        $user = $data['data']['user'];
+    } elseif (!empty($data['user'])) {
+        $user = $data['user'];
+    } elseif (!empty($data['data'])) {
+        // sometimes get_detail_user returns data directly
+        $user = $data['data'];
+    }
+
+    if ($http_code === 200 && !empty($user) && !empty($user['id'])) {
+        // Create local session
+        $_SESSION['user_id'] = $user['id'];
+        $_SESSION['user_email'] = $user['email'] ?? '';
+        $_SESSION['user_name'] = $user['name'] ?? ($user['fullname'] ?? '');
+        $_SESSION['sso_provider'] = 'rtc';
+
+        log_debug("rtcAutoLogin: success for user_id=" . $_SESSION['user_id']);
+
+        // Optional: sync local DB user if you need it
+        if (!empty($dbh)) {
+            try {
+                // example: upsert user into local users table - adapt to your schema
+                $sth = $dbh->prepare("INSERT INTO users (id, email, name, updated_at) VALUES (:id, :email, :name, NOW())
+                    ON DUPLICATE KEY UPDATE email = VALUES(email), name = VALUES(name), updated_at = NOW()");
+                $sth->execute([
+                    ':id' => $user['id'],
+                    ':email' => $user['email'] ?? null,
+                    ':name' => $_SESSION['user_name'],
+                ]);
+            } catch (Exception $e) {
+                // log but don't fail the login
+                log_debug("rtcAutoLogin: DB sync failed: " . $e->getMessage());
+            }
+        }
+
+        return true;
+    }
+
+    // token invalid or unexpected response
+    log_debug("rtcAutoLogin: validation failed (http_code={$http_code}). Response: " . substr(json_encode($data), 0, 400));
+    return false;
 }
 
-// ✅ 1. If already logged in, redirect
-if (!empty($_SESSION['login'])) {
-    log_debug("Already logged in, redirecting to dashboard.");
-    header("Location: dashboard.php");
-    exit;
-}
-
-// ✅ 2. Check if token passed from bridge page (GET/POST)
-if (!empty($_GET['token']) || !empty($_POST['token'])) {
-    $token = $_GET['token'] ?? $_POST['token'];
-    log_debug("Token received for auto-login: $token");
-
-    if (rtcAutoLogin($token, $dbh)) {
+// ---------------------------
+// 1) If cookie 'auth_token' exists, attempt auto-login
+// ---------------------------
+$token = null;
+if (!empty($_COOKIE['auth_token'])) {
+    $token = $_COOKIE['auth_token'];
+    // Attempt to login using cookie token
+    if (rtcAutoLogin($token, $dbh ?? null)) {
+        // success
         header("Location: dashboard.php");
         exit;
     } else {
-        $_SESSION['toast'] = ['type' => 'danger', 'message' => 'Auto-login failed. Please login manually.'];
+        // Optionally clear cookie when invalid to avoid repeated failed attempts
+        setcookie('auth_token', '', [
+            'expires' => time() - 3600,
+            'path' => '/',
+            'domain' => '.camai.kh',
+            'secure' => true,
+            'httponly' => true,
+            'samesite' => 'None'
+        ]);
+        log_debug("Cleared invalid auth_token cookie.");
+        // do not exit; allow other login methods (GET/POST) and render login form
     }
 }
 
-// ✅ 3. Normal manual login (student/admin)
-if (isset($_POST['login'])) {
-    $email = trim($_POST['emailid']);
+// ---------------------------
+// 2) Check GET/POST token (bridge from RTC portal)
+// ---------------------------
+if (empty($token) && (!empty($_GET['token']) || !empty($_POST['token']))) {
+    $token = $_GET['token'] ?? $_POST['token'];
+
+    // URL decoding, some bridges encode token in URL
+    $token = urldecode($token);
+
+    log_debug("Found bridge token via GET/POST (masked) - attempting rtcAutoLogin.");
+    if (rtcAutoLogin($token, $dbh ?? null)) {
+        // On success, optionally set cookie for future cross-subdomain auth
+        setcookie('auth_token', $token, [
+            'expires' => time() + 60*60*24*30,
+            'path' => '/',
+            'domain' => '.camai.kh',
+            'secure' => true,
+            'httponly' => true,
+            'samesite' => 'None'
+        ]);
+        header("Location: dashboard.php");
+        exit;
+    } else {
+        $_SESSION['toast'] = ['type' => 'danger', 'message' => 'Login failed via SSO token.'];
+    }
+}
+
+// ---------------------------
+// 3) (Optional) Handle local/manual login form submission
+//    Replace with actual local auth logic if you have one.
+// ---------------------------
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['email'], $_POST['password']) && empty($_POST['token'])) {
+    $email = trim($_POST['email']);
     $password = $_POST['password'];
 
-    // --- Admin login ---
-    $sqlAdmin = "SELECT UserName, Password FROM admin WHERE UserName = :email";
-    $query = $dbh->prepare($sqlAdmin);
-    $query->bindParam(':email', $email);
-    $query->execute();
-    $admin = $query->fetch(PDO::FETCH_OBJ);
-
-    if ($admin && $admin->Password === md5($password)) {
-        $_SESSION['alogin'] = $email;
-        header("Location: admin/dashboard.php");
-        exit;
-    }
-
-    // --- RTC API login ---
-    $apiLoginUrl = "https://api.rtc-bb.camai.kh/api/auth/login";
-    $payload = json_encode(['email' => $email, 'password' => $password]);
-
-    $ch = curl_init($apiLoginUrl);
-    curl_setopt_array($ch, [
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_POST => true,
-        CURLOPT_POSTFIELDS => $payload,
-        CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
-        CURLOPT_SSL_VERIFYPEER => false,
-    ]);
-    $response = curl_exec($ch);
-    $status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    $error = curl_error($ch);
-    curl_close($ch);
-
-    if ($error) {
-        $_SESSION['toast'] = ['type' => 'danger', 'message' => "Network error: $error"];
-        header("Location: index.php");
-        exit;
-    }
-
-    $result = json_decode($response, true);
-    log_debug("RTC login response: " . print_r($result, true));
-
-    $token = $result['token'] ?? $result['access_token'] ?? ($result['data']['token'] ?? null);
-
-    if ($status === 200 && $token) {
-        if (rtcAutoLogin($token, $dbh)) {
-            header("Location: dashboard.php");
-            exit;
+    // Example local auth - adapt to your DB structure and password hashing
+    try {
+        if (!empty($dbh)) {
+            $sth = $dbh->prepare("SELECT id, password_hash, name FROM users WHERE email = :email LIMIT 1");
+            $sth->execute([':email' => $email]);
+            $row = $sth->fetch(PDO::FETCH_ASSOC);
+            if ($row && password_verify($password, $row['password_hash'])) {
+                $_SESSION['user_id'] = $row['id'];
+                $_SESSION['user_email'] = $email;
+                $_SESSION['user_name'] = $row['name'] ?? '';
+                header("Location: dashboard.php");
+                exit;
+            } else {
+                $_SESSION['toast'] = ['type' => 'danger', 'message' => 'Invalid email or password.'];
+            }
+        } else {
+            // If no DB, reject and log
+            $_SESSION['toast'] = ['type' => 'danger', 'message' => 'Local login not available.'];
+            log_debug("Local login attempted but \$dbh not configured.");
         }
-        $_SESSION['toast'] = ['type' => 'danger', 'message' => 'Login successful but failed to start session.'];
-    } else {
-        $msg = $result['message'] ?? "Login failed (HTTP $status)";
-        $_SESSION['toast'] = ['type' => 'danger', 'message' => $msg];
+    } catch (Exception $e) {
+        log_debug("Local login error: " . $e->getMessage());
+        $_SESSION['toast'] = ['type' => 'danger', 'message' => 'Login error.'];
     }
 }
+// ---------------------------
+// If reached here, no auto-login succeeded: show login page
+// ---------------------------
+$toast = $_SESSION['toast'] ?? null;
+unset($_SESSION['toast']);
 ?>
 <!DOCTYPE html>
 <html lang="en">
