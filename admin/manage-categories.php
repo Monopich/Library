@@ -93,7 +93,7 @@ body { background-color: #f8f9fa; }
 
 <?php include('includes/header.php'); ?>
 
-<div class="container my-3">
+<div class="container my-3" style="padding-bottom: 50px;">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h2 class="fw-bold text-primary">Manage Categories</h2>
         <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addCategoryModal">
@@ -101,7 +101,7 @@ body { background-color: #f8f9fa; }
         </button>
     </div>
 
-    <div class="table-responsive shadow-sm rounded bg-white p-3">
+    <div class="table-responsive shadow-sm rounded bg-white p-3"  >
         <table class="table table-striped table-hover table-bordered align-middle" id="categoriesTable">
             <thead class="table-primary text-white">
                 <tr>

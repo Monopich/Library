@@ -33,7 +33,7 @@ body { background-color: #f8f9fa; }
 
 <?php include('includes/header.php'); ?>
 
-<div class="container my-3">
+<div class="container my-3" style="padding-bottom: 50px; padding-bottom: 50px;">
     <h2 class="mb-4 fw-bold text-primary">My Issued Books</h2>
 
     <div class="table-responsive shadow-sm rounded bg-white p-3">

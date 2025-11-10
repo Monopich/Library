@@ -48,7 +48,7 @@ body { background-color: #f8f9fa; }
 <body>
 <?php include('includes/header.php'); ?>
 
-<div class="container my-3">
+<div class="container my-3" style="padding-bottom: 50px;">
     <h2 class="fw-bold mb-4 text-primary">Student #<?= htmlentities($sid) ?> - Book Issued History</h2>
 
     <div class="table-responsive shadow-sm rounded bg-white p-3">

@@ -76,7 +76,7 @@ function valid() {
 <body>
 <?php include('includes/header.php'); ?>
 
-<div class="container my-3">
+<div class="container my-3" style="padding-bottom: 50px;">
     <h2 class="fw-bold mb-4 text-primary">Change Password</h2>
 
     <div class="row justify-content-center">
