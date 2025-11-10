@@ -2,7 +2,7 @@
 session_start();
 ?>
 <!-- HEADER -->
-<nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm" style="border-bottom: 4px solid #007bff;">
+<nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm sticky-top" style="border-bottom: 4px solid #007bff; z-index: 1030;">
     <div class="container-fluid justify-content-center w-auto">
         <!-- Logo -->
         <a class="navbar-brand d-flex align-items-center me-4" href="dashboard.php">

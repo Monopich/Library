@@ -26,7 +26,7 @@ if (strlen($_SESSION['alogin']) == 0) {
     <?php include('includes/header.php'); ?>
     <!-- MENU SECTION END-->
 
-    <div class="content-wrapper py-4">
+    <div class="content-wrapper py-5" style="padding-top: 100px; padding-bottom: 100px;">
         <div class="container">
             <div class="row mb-4">
                 <div class="col-12">

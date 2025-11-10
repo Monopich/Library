@@ -207,7 +207,7 @@ body { background-color: #f8f9fa; }
 
 <?php include('includes/header.php'); ?>
 
-<div class="container my-3">
+<div class="container my-3" style="padding-bottom: 50px;">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h2 class="fw-bold text-primary">Manage eBooks</h2>
         <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addEbookModal">

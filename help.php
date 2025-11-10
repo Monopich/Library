@@ -86,7 +86,7 @@ if (strlen($_SESSION['login']) == 0) {
 <!-- ✅ Include standard header -->
 <?php include('includes/header.php'); ?>
 
-<div class="container my-5">
+<div class="container my-3">
     <div class="help-container">
         <h1>📘 Library System Help & User Guide</h1>
 

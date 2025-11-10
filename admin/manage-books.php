@@ -130,6 +130,31 @@ body { background-color: #f8f9fa; }
     vertical-align: middle;
     text-align: center;
 }
+.table {
+    table-layout: fixed;
+    width: 100%;
+}
+.table img {
+    width: 100%;
+    height: auto;
+    object-fit: cover;
+}
+.table th:nth-child(1) { width: 5%; } /* # */
+.table th:nth-child(2) { width: 10%; } /* Cover */
+.table th:nth-child(3) { width: 20%; } /* Book Name */
+.table th:nth-child(4) { width: 10%; } /* Category */
+.table th:nth-child(5) { width: 10%; } /* Author */
+.table th:nth-child(6) { width: 10%; } /* ISBN */
+.table th:nth-child(7) { width: 10%; } /* Price */
+.table th:nth-child(8) { width: 10%; } /* Quantity */
+.table th:nth-child(9) { width: 15%; } /* Action */
+.dataTables_wrapper .dataTables_filter, .dataTables_wrapper .dataTables_info {
+    position: sticky;
+    top: 0;
+    background: white;
+    z-index: 10;
+    padding: 10px;
+}
 </style>
 </head>
 <body>
@@ -137,7 +162,7 @@ body { background-color: #f8f9fa; }
 <?php include('includes/header.php'); ?>
 
 
-<div class="container my-3">
+<div class="container my-3" style="padding-bottom: 50px;">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h2 class="fw-bold text-primary">Manage Books</h2>
         <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addBookModal">
@@ -145,7 +170,7 @@ body { background-color: #f8f9fa; }
         </button>
     </div>
 
-    <div class="table-responsive shadow-sm rounded bg-white p-3">
+    <div class="table-responsive shadow-sm rounded bg-white p-3"  >
         <table class="table table-striped table-hover table-bordered align-middle" id="booksTable">
             <thead class="table-primary text-white">
                 <tr>
@@ -176,7 +201,7 @@ foreach ($results as $result):
 ?>
 <tr>
     <td><?php echo htmlentities($cnt); ?></td>
-    <td><img src="bookimg/<?php echo htmlentities($result->bookImage); ?>" width="50" height="70"></td>
+    <td><img src="bookimg/<?php echo htmlentities($result->bookImage); ?>" alt="Book Cover"></td>
     <td class="text-start" style="width: 300px;"><?php echo htmlentities($result->BookName); ?></td>
     <td><?php echo htmlentities($result->CategoryName); ?></td>
     <td><?php echo htmlentities($result->AuthorName); ?></td>

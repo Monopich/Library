@@ -61,10 +61,10 @@ body { background-color: #f8f9fa; }
 
 <?php include('includes/header.php'); ?>
 
-<div class="container my-3">
+<div class="container my-3" style="padding-bottom: 50px;">
     <h4 class="mb-4 fw-bold text-primary">Manage Registered Students</h4>
 
-    <div class="table-responsive shadow-sm rounded bg-white p-3">
+    <div class="table-responsive shadow-sm rounded bg-white p-3"  >
         <table class="table table-striped table-bordered table-hover align-middle" id="studentsTable">
             <thead class="table-primary text-white">
                 <tr>

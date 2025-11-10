@@ -59,7 +59,7 @@ $result = $query->fetch(PDO::FETCH_OBJ);
 <!-- HEADER -->
 <?php include('includes/header.php'); ?>
 
-<div class="container my-5">
+<div class="container my-3">
     <div class="row justify-content-center">
         <div class="col-md-6">
             <div class="card shadow-sm">
