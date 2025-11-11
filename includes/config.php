@@ -6,7 +6,7 @@ if (session_status() === PHP_SESSION_NONE) {
 // ===============================
 // ✅ DATABASE CONFIGURATION
 // ===============================
-if(!defined('DB_HOST')) define('DB_HOST', 'localhost');
+if(!defined('DB_HOST')) define('DB_HOST', 'library_db');
 if(!defined('DB_USER')) define('DB_USER', 'library_user');
 if(!defined('DB_PASS')) define('DB_PASS', 'Library123!');
 if(!defined('DB_NAME')) define('DB_NAME', 'library');
