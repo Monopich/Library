@@ -1,13 +1,13 @@
 <?php
 session_start();
-include('includes/config.php');
-error_reporting(0);
+include('includes/config.php'); // this already loads language file
 
 if (strlen($_SESSION['alogin']) == 0) {
     header('location:index.php');
     exit;
 }
 
+// $lang is already available from config.php (from your en.php / kh.php)
 $msg = $error = null;
 $redirect = false;
 
@@ -28,44 +28,61 @@ if (isset($_POST['change'])) {
         $chngpwd1->bindParam(':username', $username, PDO::PARAM_STR);
         $chngpwd1->bindParam(':newpassword', $newpassword, PDO::PARAM_STR);
         $chngpwd1->execute();
-        $msg = "Your password was successfully changed!";
-        $redirect = true; // flag to redirect after toast
+        $msg = $lang["password_changed_success"];
+        $redirect = true;
     } else {
-        $error = "Your current password is incorrect.";
+        $error = $lang["current_password_wrong"];
     }
 }
 
-// Toast notification
 $toast = null;
 if ($msg) $toast = ['msg'=>$msg, 'type'=>'success'];
 if ($error) $toast = ['msg'=>$error, 'type'=>'danger'];
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="<?= isset($_SESSION['lang']) ? $_SESSION['lang'] : 'en' ?>">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Change Password | Online Library</title>
+<title><?= $lang["change_password"] ?> | Online Library</title>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
 
 <style>
-.toast-container { z-index: 1100; }
-.table thead th {
-    background-color: #007bff;
-    color: #fff;
-    text-align: center;
+body {
+    background: #f3f6fa;
 }
-.table tbody td {
-    vertical-align: middle;
-    text-align: center;
+.container {
+    max-width: 700px;
+}
+.card {
+    border-radius: 15px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+.card-header {
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+.btn-primary, .btn-success {
+    border-radius: 8px;
+}
+.form-label {
+    font-weight: 600;
+}
+.toast-container {
+    z-index: 1100;
+}
+.lang-switch {
+    position: absolute;
+    right: 20px;
+    top: 20px;
 }
 </style>
 
 <script>
 function valid() {
     if(document.chngpwd.newpassword.value !== document.chngpwd.confirmpassword.value) {
-        alert("New Password and Confirm Password do not match!");
+        alert("<?= addslashes($lang['password_mismatch']) ?>");
         document.chngpwd.confirmpassword.focus();
         return false;
     }
@@ -76,33 +93,31 @@ function valid() {
 <body>
 <?php include('includes/header.php'); ?>
 
-<div class="container my-3" style="padding-bottom: 50px;">
-    <h2 class="fw-bold mb-4 text-primary">Change Password</h2>
+<div class="container py-3 position-relative">
+    <h2 class="text-center fw-bold text-primary mb-4"><?= $lang["change_password"] ?></h2>
 
-    <div class="row justify-content-center">
-        <div class="col-md-6">
-            <div class="card shadow-sm">
-                <div class="card-header bg-primary text-white fw-bold">
-                    Change Password
+    <div class="card border-0">
+        <div class="card-header bg-primary text-white text-center">
+            <i class="bi bi-key-fill me-2"></i> <?= $lang["change_password"] ?>
+        </div>
+        <div class="card-body p-4">
+            <form method="post" name="chngpwd" onsubmit="return valid();">
+                <div class="mb-3">
+                    <label class="form-label"><?= $lang["current_password"] ?></label>
+                    <input type="password" name="password" class="form-control" required autocomplete="off">
                 </div>
-                <div class="card-body">
-                    <form method="post" name="chngpwd" onsubmit="return valid();">
-                        <div class="mb-3">
-                            <label class="form-label">Current Password</label>
-                            <input type="password" name="password" class="form-control" required autocomplete="off">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">New Password</label>
-                            <input type="password" name="newpassword" class="form-control" required autocomplete="off">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Confirm New Password</label>
-                            <input type="password" name="confirmpassword" class="form-control" required autocomplete="off">
-                        </div>
-                        <button type="submit" name="change" class="btn btn-success w-100 text-white">Change Password</button>
-                    </form>
+                <div class="mb-3">
+                    <label class="form-label"><?= $lang["new_password"] ?></label>
+                    <input type="password" name="newpassword" class="form-control" required autocomplete="off">
                 </div>
-            </div>
+                <div class="mb-3">
+                    <label class="form-label"><?= $lang["confirm_new_password"] ?></label>
+                    <input type="password" name="confirmpassword" class="form-control" required autocomplete="off">
+                </div>
+                <button type="submit" name="change" class="btn btn-success w-100">
+                    <i class="bi bi-check-circle-fill me-2"></i><?= $lang["change"] ?>
+                </button>
+            </form>
         </div>
     </div>
 </div>
@@ -122,7 +137,6 @@ function valid() {
 <?php include('includes/footer.php'); ?>
 <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-
 <script>
 $(document).ready(function(){
     <?php if($toast): ?>
@@ -131,7 +145,6 @@ $(document).ready(function(){
         toast.show();
 
         <?php if($redirect): ?>
-            // redirect after toast hides
             toastEl.addEventListener('hidden.bs.toast', function () {
                 window.location.href = 'dashboard.php';
             });

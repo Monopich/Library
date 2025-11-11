@@ -2,11 +2,18 @@
 session_start();
 error_reporting(0);
 include('includes/config.php');
+
 if (strlen($_SESSION['alogin']) == 0) {
     header('location:index.php');
     exit;
 }
 
+// Load language
+$langCode = $_SESSION['lang'] ?? 'en';
+$langFile = __DIR__ . "/languages/{$langCode}.php";
+$lang = file_exists($langFile) ? include($langFile) : include(__DIR__ . '/languages/en.php');
+
+// Update student status
 if (isset($_POST['update_status'])) {
     $id = $_POST['student_id'];
     $status = $_POST['status'];
@@ -18,7 +25,7 @@ if (isset($_POST['update_status'])) {
 
     // Set toast
     $_SESSION['toast'] = [
-        'msg' => $status == 1 ? 'Student activated successfully!' : 'Student blocked successfully!',
+        'msg' => $status == 1 ? $lang['student_activated'] : $lang['student_blocked'],
         'type' => $status == 1 ? 'success' : 'danger'
     ];
 
@@ -31,11 +38,11 @@ $toast = $_SESSION['toast'] ?? null;
 unset($_SESSION['toast']);
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="<?= $langCode ?>">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Online Library Management System | Manage Registered Students</title>
+<title>Online Library | <?= $lang['manage_students'] ?></title>
 
 <!-- Bootstrap 5 CSS -->
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -46,15 +53,8 @@ unset($_SESSION['toast']);
 body { background-color: #f8f9fa; }
 .table thead th, .table tbody td { text-align: center; vertical-align: middle; }
 .toast-container { z-index: 1100; }
-.table thead th {
-    background-color: #007bff;
-    color: #fff;
-    text-align: center;
-}
-.table tbody td {
-    vertical-align: middle;
-    text-align: center;
-}
+.table thead th { background-color: #007bff; color: #fff; text-align: center; }
+.table tbody td { vertical-align: middle; text-align: center; }
 </style>
 </head>
 <body>
@@ -62,20 +62,20 @@ body { background-color: #f8f9fa; }
 <?php include('includes/header.php'); ?>
 
 <div class="container my-3" style="padding-bottom: 50px;">
-    <h4 class="mb-4 fw-bold text-primary">Manage Registered Students</h4>
+    <h2 class="mb-4 fw-bold text-primary"><?= $lang['manage_students'] ?></h2>
 
-    <div class="table-responsive shadow-sm rounded bg-white p-3"  >
+    <div class="table-responsive shadow-sm rounded bg-white p-3">
         <table class="table table-striped table-bordered table-hover align-middle" id="studentsTable">
             <thead class="table-primary text-white">
                 <tr>
                     <th>#</th>
-                    <th>Student ID</th>
-                    <th>Student Name</th>
-                    <th>Email ID</th>
-                    <th>Mobile Number</th>
-                    <th>Reg Date</th>
-                    <th>Status</th>
-                    <th>Action</th>
+                    <th><?= $lang['student_id'] ?></th>
+                    <th class="text-start"><?= $lang['student_name'] ?></th>
+                    <th class="text-start"><?= $lang['email'] ?></th>
+                    <th><?= $lang['mobile'] ?></th>
+                    <th><?= $lang['reg_date'] ?></th>
+                    <th><?= $lang['status'] ?></th>
+                    <th><?= $lang['action'] ?></th>
                 </tr>
             </thead>
             <tbody>
@@ -85,18 +85,21 @@ $query = $dbh->prepare($sql);
 $query->execute();
 $results = $query->fetchAll(PDO::FETCH_OBJ);
 $cnt = 1;
-if ($query->rowCount() > 0) {
-    foreach ($results as $result) { ?>
+foreach ($results as $result):
+?>
 <tr>
-    <td><?= htmlentities($cnt) ?></td>
+    <td><?= $cnt ?></td>
     <td><?= htmlentities($result->StudentId) ?></td>
     <td class="text-start"><?= htmlentities($result->FullName) ?></td>
     <td class="text-start"><?= htmlentities($result->EmailId) ?></td>
     <td><?= htmlentities($result->MobileNumber) ?></td>
     <td><?= htmlentities($result->RegDate) ?></td>
     <td>
-        <?php if ($result->Status == 1) { echo '<span class="badge bg-success">Active</span>'; } 
-              else { echo '<span class="badge bg-danger">Blocked</span>'; } ?>
+        <?php if ($result->Status == 1): ?>
+            <span class="badge bg-success"><?= $lang['active'] ?></span>
+        <?php else: ?>
+            <span class="badge bg-danger"><?= $lang['blocked'] ?></span>
+        <?php endif; ?>
     </td>
     <td>
         <button class="btn btn-sm <?= $result->Status == 1 ? 'btn-danger' : 'btn-primary' ?>" 
@@ -105,13 +108,13 @@ if ($query->rowCount() > 0) {
                 data-student="<?= htmlentities($result->FullName) ?>" 
                 data-id="<?= htmlentities($result->id) ?>" 
                 data-status="<?= $result->Status == 1 ? 0 : 1 ?>">
-            <?= $result->Status == 1 ? 'Inactive' : 'Active' ?>
+            <?= $result->Status == 1 ? $lang['deactivate'] : $lang['activate'] ?>
         </button>
         <a href="student-history.php?stdid=<?= htmlentities($result->StudentId) ?>" 
-           class="btn btn-success btn-sm">Details</a>
+           class="btn btn-success btn-sm"><?= $lang['details'] ?></a>
     </td>
 </tr>
-<?php $cnt++; } } ?>
+<?php $cnt++; endforeach; ?>
             </tbody>
         </table>
     </div>
@@ -123,17 +126,17 @@ if ($query->rowCount() > 0) {
     <div class="modal-content">
       <form method="post">
         <div class="modal-header bg-primary text-white">
-          <h5 class="modal-title" id="statusModalLabel">Update Student Status</h5>
+          <h5 class="modal-title" id="statusModalLabel"><?= $lang['update_status'] ?? 'Update Student Status' ?></h5>
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body">
           <p id="modalBodyText"></p>
-          <input type="hidden" name="student_id" id="modalStudentId" value="">
-          <input type="hidden" name="status" id="modalStatus" value="">
+          <input type="hidden" name="student_id" id="modalStudentId">
+          <input type="hidden" name="status" id="modalStatus">
         </div>
         <div class="modal-footer">
-          <button type="submit" name="update_status" class="btn btn-success">Confirm</button>
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" name="update_status" class="btn btn-success"><?= $lang['confirm'] ?></button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?= $lang['cancel'] ?></button>
         </div>
       </form>
     </div>
@@ -174,8 +177,9 @@ $(document).ready(function() {
         var studentId = button.getAttribute('data-id');
         var status = button.getAttribute('data-status');
 
-        document.getElementById('modalBodyText').textContent = 
-            "Are you sure you want to " + (status == 1 ? "activate" : "block") + " student: " + studentName + "?";
+        document.getElementById('modalBodyText').textContent =
+            "<?= $lang['confirm_status_update'] ?>".replace('%s', status == 1 ? '<?= $lang['activate'] ?>' : '<?= $lang['deactivate'] ?>')
+                                                .replace('%s', studentName);
         document.getElementById('modalStudentId').value = studentId;
         document.getElementById('modalStatus').value = status;
     });

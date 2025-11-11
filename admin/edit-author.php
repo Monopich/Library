@@ -90,7 +90,7 @@ $result = $query->fetch(PDO::FETCH_OBJ);
 
 <!-- Toast -->
 <?php if(isset($_SESSION['toast'])): ?>
-<div class="position-fixed top-0 end-0 p-3 toast-container">
+<div class=" position-fixed top-0 end-0 p-3 toast-container">
     <div id="liveToast" class="toast align-items-center text-bg-<?php echo $_SESSION['toast']['type']; ?> border-0" role="alert" aria-live="assertive" aria-atomic="true">
         <div class="d-flex">
             <div class="toast-body">

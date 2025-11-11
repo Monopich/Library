@@ -10,10 +10,10 @@ if (strlen($_SESSION['alogin']) == 0) {
 }
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="<?= isset($_SESSION['lang']) ? $_SESSION['lang'] : 'en'; ?>">
 <head>
     <meta charset="UTF-8">
-    <title>Help & User Guide | Library System</title>
+    <title><?= $lang['help_title']; ?> | Library System</title>
 
     <!-- ✅ Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -29,7 +29,8 @@ if (strlen($_SESSION['alogin']) == 0) {
             max-width: 900px;
             margin: 50px auto;
             background: #ffffff;
-            padding: 40px 35px;
+            padding: 60px;
+            padding-top: 60px;
             border-radius: 12px;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
         }
@@ -87,74 +88,74 @@ if (strlen($_SESSION['alogin']) == 0) {
 <?php include('includes/header.php'); ?>
 
 <div class="container my-3">
-    <div class="help-container">
-        <h1>📘 Library System Help & User Guide</h1>
+    <div class="help-container pt-4">
+        <h1>📘 <?= $lang['help_title']; ?></h1>
 
-        <h2>1️⃣ Logging In & Log Out</h2>
-        <p> Use your registered email and password to log in. If you forget your password, click <strong>Forgot Password</strong> on the login page. And you also click button for <strong>Log Out</strong>.</p>
+        <h2>1 <?= $lang['help_login_title']; ?></h2>
+        <p><?= $lang['help_login_text']; ?></p>
 
-        <h2>2️⃣ Dashboard</h2>
+        <h2>2 <?= $lang['help_dashboard_title']; ?></h2>
         <ul>
-            <li>Go to <strong>Books List</strong>.</li>
-            <li>Go to <strong>EBooks List</strong>.</li>
-            <li>Go to <strong>Books Not Returned Yet</strong>.</li>
-            <li>Go to <strong>Registered Users</strong>.</li>
-            <li>Go to <strong>Authors List</strong>.</li>
-            <li>Go to <strong>Categories List</strong>.</li>
+            <li><?= $lang['help_dashboard_1']; ?></li>
+            <li><?= $lang['help_dashboard_2']; ?></li>
+            <li><?= $lang['help_dashboard_3']; ?></li>
+            <li><?= $lang['help_dashboard_4']; ?></li>
+            <li><?= $lang['help_dashboard_5']; ?></li>
+            <li><?= $lang['help_dashboard_6']; ?></li>
         </ul>
 
-        <h2>3️⃣ Categories</h2>
+        <h2>3 <?= $lang['help_categories_title']; ?></h2>
         <ul>
-            <li>You can manage <strong>Categories</strong> by <strong>View</strong>, <strong>Create</strong>, <strong>Edit</strong> and  <strong>Delete</strong>.</li>
-            <li>You can search <strong>Categories</strong>.</li>
+            <li><?= $lang['help_categories_1']; ?></li>
+            <li><?= $lang['help_categories_2']; ?></li>
         </ul>
 
-        <h2>4️⃣ Authors</h2>
+        <h2>4 <?= $lang['help_authors_title']; ?></h2>
         <ul>
-            <li>You can manage <strong>Authors</strong> by <strong>View</strong>, <strong>Create</strong>, <strong>Edit</strong> and  <strong>Delete</strong>.</li>
-            <li>You can search <strong>Authors</strong>.</li>
+            <li><?= $lang['help_authors_1']; ?></li>
+            <li><?= $lang['help_authors_2']; ?></li>
         </ul>
 
-        <h2>5️⃣ Books</h2>
+        <h2>5 <?= $lang['help_books_title']; ?></h2>
         <ul>
-            <li>You can manage <strong>Books</strong> by <strong>View</strong>, <strong>Create</strong>, <strong>Edit</strong> and  <strong>Delete</strong>.</li>
-            <li>You can search <strong>Books</strong>.</li>
+            <li><?= $lang['help_books_1']; ?></li>
+            <li><?= $lang['help_books_2']; ?></li>
         </ul>
 
-        <h2>6️⃣ EBooks</h2>
+        <h2>6 <?= $lang['help_ebooks_title']; ?></h2>
         <ul>
-            <li>You can manage <strong>EBooks</strong> by <strong>View</strong>, <strong>Create</strong>, <strong>Edit</strong> and  <strong>Delete</strong>.</li>
-            <li>You can upload <strong>PDF</strong> file of <strong>EBooks</strong>.</li>
-            <li>You can search <strong>EBooks</strong>.</li>
+            <li><?= $lang['help_ebooks_1']; ?></li>
+            <li><?= $lang['help_ebooks_2']; ?></li>
+            <li><?= $lang['help_ebooks_3']; ?></li>
         </ul>
 
-        <h2>7️⃣ Issued Books</h2>
+        <h2>7 <?= $lang['help_issued_title']; ?></h2>
         <ul>
-            <li>You can manage <strong>Issued Books</strong> by <strong>View</strong>, <strong>Create</strong>, <strong>Return</strong> Books from Students.</li>
-            <li>You can search <strong>Issued Books</strong>.</li>
+            <li><?= $lang['help_issued_1']; ?></li>
+            <li><?= $lang['help_issued_2']; ?></li>
         </ul>
 
-        <h2>8️⃣ Students</h2>
+        <h2>8 <?= $lang['help_students_title']; ?></h2>
         <ul>
-            <li>You can view list of <strong>Students</strong>.</li>
-            <li>You can make action as <strong>Inactivate</strong> and <strong>Activate</strong> for students.</li>
-            <li>You can view detail of each <strong>Student</strong>.</li>
-            <li>You also can search <strong>Students</strong>.</li>
+            <li><?= $lang['help_students_1']; ?></li>
+            <li><?= $lang['help_students_2']; ?></li>
+            <li><?= $lang['help_students_3']; ?></li>
+            <li><?= $lang['help_students_4']; ?></li>
         </ul>
 
-        <h2>9️⃣ Change Password</h2>
+        <h2>9 <?= $lang['help_change_password']; ?></h2>
         <ul>
-            <li>You can change your <strong>Password</strong>.</li>
+            <li><?= $lang['help_change_password_text']; ?></li>
         </ul>
 
         <div class="contact">
-            <h2>💬 Need More Help?</h2>
-            <p>If you encounter any issues, please contact our support team:</p>
+            <h2>💬 <?= $lang['help_contact_title']; ?></h2>
+            <p><?= $lang['help_contact_text']; ?></p>
             <ul class="list-unstyled">
-                <li><i class="fa fa-envelope me-2 text-primary"></i> 
+                <li><i class="fa fa-envelope me-2 text-primary"></i>
                     <a href="mailto:support@librarysystem.com">admin@rtc.edu.kh</a>
                 </li>
-                <li><i class="fa fa-phone me-2 text-primary"></i> 
+                <li><i class="fa fa-phone me-2 text-primary"></i>
                     +855 86 318 261
                 </li>
             </ul>

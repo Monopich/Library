@@ -13,7 +13,7 @@ if (strlen($_SESSION['login']) == 0) {
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Student | Issued Books</title>
+<title><?= $lang['student'] ?? 'Student' ?> | <?= $lang['issued_books'] ?? 'Issued Books' ?></title>
 
 <!-- Bootstrap 5 CSS -->
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -33,20 +33,20 @@ body { background-color: #f8f9fa; }
 
 <?php include('includes/header.php'); ?>
 
-<div class="container my-3" style="padding-bottom: 50px; padding-bottom: 50px;">
-    <h2 class="mb-4 fw-bold text-primary">My Issued Books</h2>
+<div class="container my-3" style="padding-bottom: 50px;">
+    <h2 class="mb-4 fw-bold text-primary"><?= $lang['my_issued_books'] ?? 'My Issued Books' ?></h2>
 
     <div class="table-responsive shadow-sm rounded bg-white p-3">
         <table class="table table-striped table-hover table-bordered align-middle" id="issuedBooksTable">
             <thead class="table-primary text-white">
                 <tr>
                     <th>#</th>
-                    <th>Book Name</th>
-                    <th>ISBN</th>
-                    <th>Issued Date</th>
-                    <th>Return Date</th>
-                    <th>Fine (USD)</th>
-                    <th>Action</th>
+                    <th><?= $lang['book_name'] ?? 'Book Name' ?></th>
+                    <th><?= $lang['isbn'] ?? 'ISBN' ?></th>
+                    <th><?= $lang['issued_date'] ?? 'Issued Date' ?></th>
+                    <th><?= $lang['return_date'] ?? 'Return Date' ?></th>
+                    <th><?= $lang['fine_usd'] ?? 'Fine (USD)' ?></th>
+                    <th><?= $lang['action'] ?? 'Action' ?></th>
                 </tr>
             </thead>
             <tbody>
@@ -69,18 +69,18 @@ foreach ($results as $result):
     <td class="text-start"><?= htmlentities($result->BookName) ?></td>
     <td><?= htmlentities($result->ISBNNumber) ?></td>
     <td><?= htmlentities($result->IssuesDate) ?></td>
-    <td><?= $result->ReturnDate ? htmlentities($result->ReturnDate) : "<span class='not-returned'>Not Returned Yet</span>" ?></td>
+    <td><?= $result->ReturnDate ? htmlentities($result->ReturnDate) : "<span class='not-returned'>" . ($lang['not_returned_yet'] ?? 'Not Returned Yet') . "</span>" ?></td>
     <td><?= htmlentities($result->fine) ?></td>
     <td>
         <button class="btn btn-primary btn-sm viewIssuedBookBtn"
             data-bookname="<?= htmlentities($result->BookName) ?>"
             data-isbn="<?= htmlentities($result->ISBNNumber) ?>"
             data-issue="<?= htmlentities($result->IssuesDate) ?>"
-            data-return="<?= $result->ReturnDate ?: 'Not Returned Yet' ?>"
+            data-return="<?= $result->ReturnDate ?: ($lang['not_returned_yet'] ?? 'Not Returned Yet') ?>"
             data-fine="<?= htmlentities($result->fine) ?>"
             data-image="admin/bookimg/<?= htmlentities($result->bookImage) ?>"
         >
-            <i class="bi bi-eye"></i> View
+            <i class="bi bi-eye"></i> <?= $lang['view'] ?? 'View' ?>
         </button>
     </td>
 </tr>
@@ -95,7 +95,7 @@ foreach ($results as $result):
   <div class="modal-dialog modal-lg modal-dialog-centered">
     <div class="modal-content">
         <div class="modal-header bg-primary text-white">
-          <h5 class="modal-title" id="viewIssuedBookModalLabel">Issued Book Details</h5>
+          <h5 class="modal-title" id="viewIssuedBookModalLabel"><?= $lang['issued_book_details'] ?? 'Issued Book Details' ?></h5>
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body">
@@ -104,16 +104,16 @@ foreach ($results as $result):
                   <img id="viewBookImage" src="" alt="Book Image">
               </div>
               <div class="col-md-8">
-                  <p><strong>Book Name:</strong> <span id="viewBookName"></span></p>
-                  <p><strong>ISBN:</strong> <span id="viewBookISBN"></span></p>
-                  <p><strong>Issued Date:</strong> <span id="viewIssueDate"></span></p>
-                  <p><strong>Return Date:</strong> <span id="viewReturnDate"></span></p>
-                  <p><strong>Fine (USD):</strong> <span id="viewFine"></span></p>
+                  <p><strong><?= $lang['book_name'] ?? 'Book Name' ?>:</strong> <span id="viewBookName"></span></p>
+                  <p><strong><?= $lang['isbn'] ?? 'ISBN' ?>:</strong> <span id="viewBookISBN"></span></p>
+                  <p><strong><?= $lang['issued_date'] ?? 'Issued Date' ?>:</strong> <span id="viewIssueDate"></span></p>
+                  <p><strong><?= $lang['return_date'] ?? 'Return Date' ?>:</strong> <span id="viewReturnDate"></span></p>
+                  <p><strong><?= $lang['fine_usd'] ?? 'Fine (USD)' ?>:</strong> <span id="viewFine"></span></p>
               </div>
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?= $lang['close'] ?? 'Close' ?></button>
         </div>
     </div>
   </div>

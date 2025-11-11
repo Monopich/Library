@@ -31,11 +31,11 @@ if (isset($_POST['addEbook'])) {
     $allowedImageExt = ['jpg', 'jpeg', 'png', 'gif'];
 
     if (!in_array($imageExt, $allowedImageExt)) {
-        $_SESSION['toast'] = ['msg' => 'Invalid image format! Only jpg, jpeg, png, gif allowed.', 'type' => 'danger'];
+        $_SESSION['toast'] = ['msg' => $lang['invalid_image'], 'type' => 'danger'];
         header('location:manage-ebooks.php'); exit;
     }
     if ($imageSize > 5*1024*1024) { // 5 MB limit
-        $_SESSION['toast'] = ['msg' => 'Image size must be less than 5 MB.', 'type' => 'danger'];
+        $_SESSION['toast'] = ['msg' => $lang['image_size_limit'], 'type' => 'danger'];
         header('location:manage-ebooks.php'); exit;
     }
     move_uploaded_file($imageTmp, $imgDir.$bookImage);
@@ -47,11 +47,11 @@ if (isset($_POST['addEbook'])) {
     $fileExt = strtolower(pathinfo($bookFile, PATHINFO_EXTENSION));
 
     if ($fileExt != 'pdf') {
-        $_SESSION['toast'] = ['msg' => 'Invalid file type! Only PDF allowed.', 'type' => 'danger'];
+        $_SESSION['toast'] = ['msg' => $lang['invalid_pdf'], 'type' => 'danger'];
         header('location:manage-ebooks.php'); exit;
     }
     if ($fileSize > 2 * 1024 * 1024 * 1024) { // 2 GB
-        $_SESSION['toast'] = ['msg' => 'PDF size must be less than 2 GB.', 'type' => 'danger'];
+        $_SESSION['toast'] = ['msg' => $lang['pdf_size_limit'], 'type' => 'danger'];
         header('location:manage-ebooks.php'); exit;
     }
     move_uploaded_file($fileTmp, $pdfDir.$bookFile);
@@ -68,13 +68,12 @@ if (isset($_POST['addEbook'])) {
     $query->bindParam(':bookFile', $bookFile, PDO::PARAM_STR);
 
     if($query->execute()){
-        $_SESSION['toast'] = ['msg' => 'eBook added successfully!', 'type' => 'success'];
+        $_SESSION['toast'] = ['msg' => $lang['ebook_added'], 'type' => 'success'];
     } else {
-        $_SESSION['toast'] = ['msg' => 'Failed to add eBook!', 'type' => 'danger'];
+        $_SESSION['toast'] = ['msg' => $lang['ebook_add_fail'], 'type' => 'danger'];
     }
     header('location:manage-ebooks.php'); exit;
 }
-
 
 // Update eBook
 if (isset($_POST['updateEbook'])) {
@@ -97,15 +96,13 @@ if (isset($_POST['updateEbook'])) {
         $allowedImages = ['jpg', 'jpeg', 'png', 'gif'];
 
         if (!in_array($imageExt, $allowedImages)) {
-            $_SESSION['toast'] = ['msg' => 'Invalid image type! Allowed: jpg, jpeg, png, gif.', 'type' => 'danger'];
-            header('location:manage-ebooks.php');
-            exit;
+            $_SESSION['toast'] = ['msg' => $lang['invalid_image'], 'type' => 'danger'];
+            header('location:manage-ebooks.php'); exit;
         }
 
         if ($imageSize > 5 * 1024 * 1024) { // 5 MB
-            $_SESSION['toast'] = ['msg' => 'Image size must be less than 5 MB.', 'type' => 'danger'];
-            header('location:manage-ebooks.php');
-            exit;
+            $_SESSION['toast'] = ['msg' => $lang['image_size_limit'], 'type' => 'danger'];
+            header('location:manage-ebooks.php'); exit;
         }
 
         move_uploaded_file($imageTmp, $imgDir . $bookImage);
@@ -120,15 +117,13 @@ if (isset($_POST['updateEbook'])) {
         $fileExt = strtolower(pathinfo($bookFile, PATHINFO_EXTENSION));
 
         if ($fileExt != 'pdf') {
-            $_SESSION['toast'] = ['msg' => 'Invalid file type! Only PDF allowed.', 'type' => 'danger'];
-            header('location:manage-ebooks.php');
-            exit;
+            $_SESSION['toast'] = ['msg' => $lang['invalid_pdf'], 'type' => 'danger'];
+            header('location:manage-ebooks.php'); exit;
         }
 
         if ($fileSize > 2 * 1024 * 1024 * 1024) { // 2 GB
-            $_SESSION['toast'] = ['msg' => 'PDF size must be less than 2 GB.', 'type' => 'danger'];
-            header('location:manage-ebooks.php');
-            exit;
+            $_SESSION['toast'] = ['msg' => $lang['pdf_size_limit'], 'type' => 'danger'];
+            header('location:manage-ebooks.php'); exit;
         }
 
         move_uploaded_file($fileTmp, $pdfDir . $bookFile);
@@ -155,15 +150,13 @@ if (isset($_POST['updateEbook'])) {
     $query->bindParam(':id', $bookId, PDO::PARAM_INT);
 
     if ($query->execute()) {
-        $_SESSION['toast'] = ['msg' => 'eBook updated successfully!', 'type' => 'success'];
+        $_SESSION['toast'] = ['msg' => $lang['ebook_updated'], 'type' => 'success'];
     } else {
-        $_SESSION['toast'] = ['msg' => 'Failed to update eBook!', 'type' => 'danger'];
+        $_SESSION['toast'] = ['msg' => $lang['ebook_update_fail'], 'type' => 'danger'];
     }
 
-    header('location:manage-ebooks.php');
-    exit;
+    header('location:manage-ebooks.php'); exit;
 }
-
 
 // Delete eBook
 if (isset($_GET['del'])) {
@@ -172,12 +165,11 @@ if (isset($_GET['del'])) {
     $query = $dbh->prepare($sql);
     $query->bindParam(':id', $id, PDO::PARAM_INT);
     if($query->execute()){
-        $_SESSION['toast'] = ['msg' => 'eBook deleted successfully!', 'type' => 'success'];
+        $_SESSION['toast'] = ['msg' => $lang['ebook_deleted'], 'type' => 'success'];
     } else {
-        $_SESSION['toast'] = ['msg' => 'Failed to delete eBook!', 'type' => 'danger'];
+        $_SESSION['toast'] = ['msg' => $lang['ebook_delete_fail'], 'type' => 'danger'];
     }
-    header('location:manage-ebooks.php');
-    exit;
+    header('location:manage-ebooks.php'); exit;
 }
 
 $toast = $_SESSION['toast'] ?? null;
@@ -189,7 +181,7 @@ unset($_SESSION['toast']);
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Library Management System | Manage eBooks</title>
+<title><?php echo $lang['manage_ebooks']; ?></title>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
 <link href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" rel="stylesheet">
@@ -209,10 +201,12 @@ body { background-color: #f8f9fa; }
 
 <div class="container my-3" style="padding-bottom: 50px;">
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h2 class="fw-bold text-primary">Manage eBooks</h2>
-        <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addEbookModal">
-            <i class="bi bi-plus-circle"></i> Add eBook
-        </button>
+        <h2 class="fw-bold text-primary"><?php echo $lang['manage_ebooks']; ?></h2>
+        <div>
+            <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addEbookModal">
+                <i class="bi bi-plus-circle"></i> <?php echo $lang['add_ebook']; ?>
+            </button>
+        </div>
     </div>
 
     <div class="table-responsive shadow-sm rounded bg-white p-3">
@@ -220,12 +214,12 @@ body { background-color: #f8f9fa; }
             <thead class="table-primary text-white">
                 <tr>
                     <th>#</th>
-                    <th>Cover</th>
-                    <th>Book Name</th>
-                    <th>Category</th>
-                    <th>Author</th>
-                    <th>ISBN</th>
-                    <th>Price</th>
+                    <th><?php echo $lang['book_image']; ?></th>
+                    <th><?php echo $lang['book_name']; ?></th>
+                    <th><?php echo $lang['category']; ?></th>
+                    <th><?php echo $lang['author']; ?></th>
+                    <th><?php echo $lang['isbn']; ?></th>
+                    <th><?php echo $lang['price']; ?></th>
                     <th>PDF</th>
                     <th>Action</th>
                 </tr>
@@ -255,7 +249,7 @@ foreach ($results as $result):
     <td>
         <?php if ($result->BookFile): ?>
             <a href="assets/pdf/<?= htmlentities($result->BookFile) ?>" target="_blank" class="btn btn-sm btn-outline-primary">
-                <i class="bi bi-file-earmark-pdf me-1"></i> View PDF
+                <i class="bi bi-file-earmark-pdf me-1"></i> <?php echo $lang['view_pdf']; ?>
             </a>
         <?php else: ?>
             <span class="text-muted">No File</span>
@@ -271,9 +265,11 @@ foreach ($results as $result):
             data-isbn="<?php echo htmlentities($result->ISBNNumber); ?>"
             data-price="<?php echo htmlentities($result->BookPrice); ?>"
             data-bs-toggle="modal" data-bs-target="#editEbookModal">
-            Edit <i class="bi bi-pencil-square"></i>
+            <?php echo $lang['edit']; ?> <i class="bi bi-pencil-square"></i>
         </button>
-        <button class="btn btn-danger btn-sm deleteEbookBtn" data-id="<?php echo $result->bookid; ?>" data-bs-toggle="modal" data-bs-target="#deleteEbookModal">Delete <i class="bi bi-trash"></i></button>
+        <button class="btn btn-danger btn-sm deleteEbookBtn" data-id="<?php echo $result->bookid; ?>" data-bs-toggle="modal" data-bs-target="#deleteEbookModal">
+            <?php echo $lang['delete']; ?> <i class="bi bi-trash"></i>
+        </button>
     </td>
 </tr>
 <?php $cnt++; endforeach; ?>
@@ -299,150 +295,164 @@ $authors = $authorQuery->fetchAll(PDO::FETCH_OBJ);
 ?>
 
 <!-- Add eBook Modal -->
-<div class="modal fade" id="addEbookModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <form method="post" enctype="multipart/form-data">
-                <div class="modal-header bg-success text-white">
-                    <h5 class="modal-title">Add eBook</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">Book Name</label>
-                        <input type="text" name="bookName" class="form-control" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Category</label>
-                        <select class="form-select select2" name="catId" required>
-                            <option value="">Select Category</option>
-                            <?php foreach ($categories as $cat): ?>
-                                <option value="<?php echo $cat->id; ?>"><?php echo htmlentities($cat->CategoryName); ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Author</label>
-                        <select class="form-select select2" name="authorId" required>
-                            <option value="">Select Author</option>
-                            <?php foreach ($authors as $auth): ?>
-                                <option value="<?php echo $auth->id; ?>"><?php echo htmlentities($auth->AuthorName); ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">ISBN</label>
-                        <input type="text" name="isbn" class="form-control" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Price</label>
-                        <input type="text" name="price" class="form-control" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Book Image</label>
-                        <input type="file" name="bookImage" class="form-control" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">PDF File</label>
-                        <input type="file" name="bookFile" class="form-control" required>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="submit" name="addEbook" class="btn btn-success">Add</button>
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                </div>
-            </form>
+<div class="modal fade" id="addEbookModal" tabindex="-1" aria-labelledby="addEbookModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <form method="POST" enctype="multipart/form-data">
+      <div class="modal-content ">
+        <div class="modal-header bg-success text-white">
+          <h5 class="modal-title" id="addEbookModalLabel"><?php echo $lang['add_ebook']; ?></h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<?php echo $lang['close']; ?>"></button>
         </div>
-    </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label"><?php echo $lang['book_name']; ?></label>
+            <input type="text" name="bookName" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label"><?php echo $lang['category']; ?></label>
+            <select name="catId" class="form-select" required>
+              <option value=""><?php echo $lang['select_category']; ?></option>
+              <?php
+              $cats = $dbh->query("SELECT id, CategoryName FROM tblcategory")->fetchAll(PDO::FETCH_OBJ);
+              foreach ($cats as $cat) {
+                  echo "<option value='{$cat->id}'>" . htmlentities($cat->CategoryName) . "</option>";
+              }
+              ?>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label"><?php echo $lang['author']; ?></label>
+            <select name="authorId" class="form-select" required>
+              <option value=""><?php echo $lang['select_author']; ?></option>
+              <?php
+              $authors = $dbh->query("SELECT id, AuthorName FROM tblauthors")->fetchAll(PDO::FETCH_OBJ);
+              foreach ($authors as $author) {
+                  echo "<option value='{$author->id}'>" . htmlentities($author->AuthorName) . "</option>";
+              }
+              ?>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label"><?php echo $lang['isbn']; ?></label>
+            <input type="text" name="isbn" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label"><?php echo $lang['price']; ?></label>
+            <input type="number" step="0.01" name="price" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label"><?php echo $lang['book_image']; ?></label>
+            <input type="file" name="bookImage" class="form-control" accept="image/*" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label"><?php echo $lang['pdf_file']; ?></label>
+            <input type="file" name="bookFile" class="form-control" accept="application/pdf" required>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php echo $lang['close']; ?></button>
+          <button type="submit" name="addEbook" class="btn btn-success"><?php echo $lang['add']; ?></button>
+        </div>
+      </div>
+    </form>
+  </div>
 </div>
 
 <!-- Edit eBook Modal -->
-<div class="modal fade" id="editEbookModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <form method="post" enctype="multipart/form-data" id="editEbookForm">
-                <div class="modal-header bg-primary text-white">
-                    <h5 class="modal-title">Edit eBook</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <input type="hidden" name="bookId" id="editEbookId">
-                    <div class="mb-3">
-                        <label class="form-label">Book Name</label>
-                        <input type="text" name="bookName" id="editEbookName" class="form-control" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Category</label>
-                        <select name="catId" id="editCatId" class="form-select" required>
-                            <option value="">Select Category</option>
-                            <?php foreach ($categories as $cat): ?>
-                                <option value="<?php echo $cat->id; ?>"><?php echo htmlentities($cat->CategoryName); ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Author</label>
-                        <select name="authorId" id="editAuthorId" class="form-select" required>
-                            <option value="">Select Author</option>
-                            <?php foreach ($authors as $auth): ?>
-                                <option value="<?php echo $auth->id; ?>"><?php echo htmlentities($auth->AuthorName); ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">ISBN</label>
-                        <input type="text" name="isbn" id="editISBN" class="form-control" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Price</label>
-                        <input type="text" name="price" id="editPrice" class="form-control" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Book Image (Optional)</label>
-                        <input type="file" name="bookImage" class="form-control">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">PDF File (Optional)</label>
-                        <input type="file" name="bookFile" class="form-control">
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="submit" name="updateEbook" class="btn btn-primary">Update</button>
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                </div>
-            </form>
+<div class="modal fade" id="editEbookModal" tabindex="-1" aria-labelledby="editEbookModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <form method="POST" enctype="multipart/form-data">
+      <input type="hidden" name="bookId" id="editEbookId">
+      <div class="modal-content">
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title" id="editEbookModalLabel"><?php echo $lang['edit_ebook']; ?></h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<?php echo $lang['close']; ?>"></button>
         </div>
-    </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label"><?php echo $lang['book_name']; ?></label>
+            <input type="text" name="bookName" id="editEbookName" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label"><?php echo $lang['category']; ?></label>
+            <select name="catId" id="editCatId" class="form-select" required>
+              <option value=""><?php echo $lang['select_category']; ?></option>
+              <?php
+              foreach ($cats as $cat) {
+                  echo "<option value='{$cat->id}'>" . htmlentities($cat->CategoryName) . "</option>";
+              }
+              ?>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label"><?php echo $lang['author']; ?></label>
+            <select name="authorId" id="editAuthorId" class="form-select" required>
+              <option value=""><?php echo $lang['select_author']; ?></option>
+              <?php
+              foreach ($authors as $author) {
+                  echo "<option value='{$author->id}'>" . htmlentities($author->AuthorName) . "</option>";
+              }
+              ?>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label"><?php echo $lang['isbn']; ?></label>
+            <input type="text" name="isbn" id="editISBN" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label"><?php echo $lang['price']; ?></label>
+            <input type="number" step="0.01" name="price" id="editPrice" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label"><?php echo $lang['book_image']; ?> (<?php echo $lang['optional']; ?>)</label>
+            <input type="file" name="bookImage" class="form-control" accept="image/*">
+          </div>
+          <div class="mb-3">
+            <label class="form-label"><?php echo $lang['pdf_file']; ?> (<?php echo $lang['optional']; ?>)</label>
+            <input type="file" name="bookFile" class="form-control" accept="application/pdf">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php echo $lang['close']; ?></button>
+          <button type="submit" name="updateEbook" class="btn btn-primary"><?php echo $lang['update']; ?></button>
+        </div>
+      </div>
+    </form>
+  </div>
 </div>
 
-<!-- Delete Confirmation Modal -->
-<div class="modal fade" id="deleteEbookModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title">Confirm Delete</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">Are you sure you want to delete this eBook?</div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <a href="#" class="btn btn-danger" id="confirmDeleteBtn">Delete</a>
-            </div>
-        </div>
+<!-- Delete eBook Modal -->
+<div class="modal fade" id="deleteEbookModal" tabindex="-1" aria-labelledby="deleteEbookModalLabel" aria-hidden="true">
+  <div class="modal-dialog ">
+    <div class="modal-content">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title" id="deleteEbookModalLabel"><?php echo $lang['delete_ebook']; ?></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<?php echo $lang['close']; ?>"></button>
+      </div>
+      <div class="modal-body">
+        <p><?php echo $lang['confirm_delete_ebook']; ?></p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php echo $lang['cancel']; ?></button>
+        <a href="#" class="btn btn-danger" id="confirmDeleteBtn"><?php echo $lang['delete']; ?></a>
+      </div>
     </div>
+  </div>
 </div>
 
-<!-- Toast -->
-<div class="position-fixed top-0 end-0 p-3 toast-container">
+<!-- Toast Notification -->
 <?php if($toast): ?>
-    <div id="liveToast" class="toast align-items-center text-bg-<?php echo $toast['type']; ?> border-0" role="alert">
-        <div class="d-flex">
-            <div class="toast-body"><?php echo htmlentities($toast['msg']); ?></div>
-            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-        </div>
+<div class="position-fixed top-0 end-0 p-3 toast-container">
+  <div class="toast align-items-center text-bg-<?php echo $toast['type']; ?> border-0" role="alert" aria-live="assertive" aria-atomic="true" id="liveToast">
+    <div class="d-flex">
+      <div class="toast-body">
+        <?php echo $toast['msg']; ?>
+      </div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="<?php echo $lang['close']; ?>"></button>
     </div>
-<?php endif; ?>
+  </div>
 </div>
+<?php endif; ?>
 
 <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>

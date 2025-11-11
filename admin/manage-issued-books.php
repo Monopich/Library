@@ -1,7 +1,7 @@
 <?php
 session_start();
 error_reporting(0);
-include('includes/config.php');
+include('includes/config.php'); // this loads $lang according to selected language
 
 if (strlen($_SESSION['alogin']) == 0) {
     header('location:index.php');
@@ -15,7 +15,6 @@ if(isset($_POST['return'])){
     $bookid = intval($_POST['bookid']);
     $rstatus = 1;
 
-    // Update return status
     $sql = "UPDATE tblissuedbookdetails SET fine=:fine, RetrunStatus=:rstatus WHERE id=:rid";
     $query = $dbh->prepare($sql);
     $query->bindParam(':rid', $rid, PDO::PARAM_INT);
@@ -23,13 +22,12 @@ if(isset($_POST['return'])){
     $query->bindParam(':rstatus', $rstatus, PDO::PARAM_INT);
     $query->execute();
 
-    // Update book availability
     $sql2 = "UPDATE tblbooks SET isIssued=0 WHERE id=:bookid";
     $query2 = $dbh->prepare($sql2);
     $query2->bindParam(':bookid', $bookid, PDO::PARAM_INT);
     $query2->execute();
 
-    $_SESSION['toast'] = ["type"=>"success","msg"=>"Book returned successfully"];
+    $_SESSION['toast'] = ["type"=>"success","msg"=>$lang['book_returned_success']];
     header('Location: manage-issued-books.php');
     exit();
 }
@@ -49,28 +47,25 @@ if (isset($_POST['issue'])) {
         $query->bindParam(':aremark', $aremark, PDO::PARAM_STR);
         $query->execute();
         $lastInsertId = $dbh->lastInsertId();
-        if ($lastInsertId) {
-            $_SESSION['toast'] = ["type"=>"success","msg"=>"Book issued successfully"];
-        } else {
-            $_SESSION['toast'] = ["type"=>"danger","msg"=>"Something went wrong. Please try again"];
-        }
+        $_SESSION['toast'] = $lastInsertId 
+            ? ["type"=>"success","msg"=>$lang['book_issued_success']]
+            : ["type"=>"danger","msg"=>$lang['something_wrong']];
     } else {
-        $_SESSION['toast'] = ["type"=>"danger","msg"=>"Book not available"];
+        $_SESSION['toast'] = ["type"=>"danger","msg"=>$lang['book_not_available']];
     }
     header('Location: manage-issued-books.php');
     exit();
 }
 
-// Toast messages
 $toast = $_SESSION['toast'] ?? null;
 unset($_SESSION['toast']);
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="<?= $lang['lang_code'] ?? 'en' ?>">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Library Management System | Manage Issued Books</title>
+<title><?= $lang['manage_issued_books'] ?></title>
 
 <!-- Bootstrap 5 CSS -->
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -90,23 +85,23 @@ body { background-color: #f8f9fa; }
 
 <div class="container my-3" style="padding-bottom: 50px;">
   <div class="d-flex justify-content-between align-items-center mb-3">
-    <h2 class="fw-bold text-primary">Manage Issued Books</h2>
+    <h2 class="fw-bold text-primary"><?= $lang['manage_issued_books'] ?></h2>
     <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#issueBookModal">
-      <i class="bi bi-plus-circle"></i>New Issue Book
+      <i class="bi bi-plus-circle"></i><?= " ".$lang['new_issue_book'] ?>
     </button>
   </div>
 
-  <div class="table-responsive shadow-sm rounded bg-white p-3"  >
+  <div class="table-responsive shadow-sm rounded bg-white p-3">
     <table class="table table-striped table-hover table-bordered align-middle" id="issuedBooksTable">
       <thead>
         <tr>
           <th>#</th>
-          <th>Student Name</th>
-          <th>Book Name</th>
-          <th>ISBN</th>
-          <th>Issued Date</th>
-          <th>Return Date</th>
-          <th>Action</th>
+          <th><?= $lang['student_name'] ?></th>
+          <th><?= $lang['book_name'] ?></th>
+          <th><?= $lang['isbn'] ?></th>
+          <th><?= $lang['issued_date'] ?></th>
+          <th><?= $lang['return_date'] ?></th>
+          <th><?= $lang['action'] ?></th>
         </tr>
       </thead>
       <tbody>
@@ -128,7 +123,7 @@ foreach ($results as $result):
     <td class="text-start"><?= htmlentities($result->BookName) ?></td>
     <td><?= htmlentities($result->ISBNNumber) ?></td>
     <td><?= htmlentities($result->IssuesDate) ?></td>
-    <td><?= $result->ReturnDate ? htmlentities($result->ReturnDate) : "Not Returned Yet" ?></td>
+    <td><?= $result->ReturnDate ? htmlentities($result->ReturnDate) : $lang['not_returned_yet'] ?></td>
     <td>
         <button class="btn btn-primary btn-sm editIssuedBookBtn"
             data-rid="<?= $result->rid ?>"
@@ -140,12 +135,12 @@ foreach ($results as $result):
             data-bookname="<?= htmlentities($result->BookName) ?>"
             data-isbn="<?= htmlentities($result->ISBNNumber) ?>"
             data-issue="<?= htmlentities($result->IssuesDate) ?>"
-            data-return="<?= $result->ReturnDate ?: 'Not Returned Yet' ?>"
+            data-return="<?= $result->ReturnDate ?: $lang['not_returned_yet'] ?>"
             data-image="bookimg/<?= htmlentities($result->bookImage) ?>"
             data-fine="<?= htmlentities($result->fine) ?>"
             data-returnstatus="<?= $result->RetrunStatus ?>"
         >
-            <i class="bi bi-pencil-square"></i> Return
+            <i class="bi bi-pencil-square"></i> <?= $lang['return_book'] ?>
         </button>
     </td>
 </tr>
@@ -157,48 +152,48 @@ foreach ($results as $result):
 
 <!-- Edit Issued Book Modal -->
 <div class="modal fade" id="editIssuedBookModal" tabindex="-1" aria-labelledby="editIssuedBookModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg modal-dialog-centered">
+  <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
       <form id="editIssuedBookForm" method="post">
         <div class="modal-header bg-primary text-white">
-          <h5 class="modal-title">Update Issued Book</h5>
+          <h5 class="modal-title"><?= $lang['update_issued_book'] ?></h5>
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body">
           <input type="hidden" name="rid" id="editRid">
           <input type="hidden" name="bookid" id="editBookId">
 
-          <h6>Student Details</h6><hr>
+          <h6><?= $lang['student_details'] ?></h6><hr>
           <div class="row mb-2">
-            <div class="col-md-6"><strong>ID:</strong> <span id="editStudentId"></span></div>
-            <div class="col-md-6"><strong>Name:</strong> <span id="editStudentName"></span></div>
+            <div class="col-md-6"><strong><?= $lang['student_id'] ?>:</strong> <span id="editStudentId"></span></div>
+            <div class="col-md-6"><strong><?= $lang['student_name'] ?>:</strong> <span id="editStudentName"></span></div>
           </div>
           <div class="row mb-2">
-            <div class="col-md-6"><strong>Email:</strong> <span id="editStudentEmail"></span></div>
-            <div class="col-md-6"><strong>Contact:</strong> <span id="editStudentContact"></span></div>
+            <div class="col-md-6"><strong><?= $lang['email'] ?>:</strong> <span id="editStudentEmail"></span></div>
+            <div class="col-md-6"><strong><?= $lang['contact'] ?>:</strong> <span id="editStudentContact"></span></div>
           </div>
 
-          <h6>Book Details</h6><hr>
+          <h6><?= $lang['book_details'] ?></h6><hr>
           <div class="row mb-2">
             <div class="col-md-6"><img id="editBookImage" src="" width="120"></div>
             <div class="col-md-6">
-              <strong>Name:</strong> <span id="editBookName"></span><br>
-              <strong>ISBN:</strong> <span id="editBookISBN"></span>
+              <strong><?= $lang['book_name'] ?>:</strong> <span id="editBookName"></span><br>
+              <strong><?= $lang['isbn'] ?>:</strong> <span id="editBookISBN"></span>
             </div>
           </div>
           <div class="row mb-2">
-            <div class="col-md-6"><strong>Issued Date:</strong> <span id="editIssueDate"></span></div>
-            <div class="col-md-6"><strong>Return Date:</strong> <span id="editReturnDate"></span></div>
+            <div class="col-md-6"><strong><?= $lang['issued_date'] ?>:</strong> <span id="editIssueDate"></span></div>
+            <div class="col-md-6"><strong><?= $lang['return_date'] ?>:</strong> <span id="editReturnDate"></span></div>
           </div>
 
           <div class="mb-2">
-            <label for="editFine">Fine (USD):</label>
+            <label for="editFine"><?= $lang['fine_usd'] ?>:</label>
             <input type="text" class="form-control" name="fine" id="editFine" required>
           </div>
         </div>
         <div class="modal-footer">
-          <button type="submit" name="return" class="btn btn-success">Return Book</button>
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+          <button type="submit" name="return" class="btn btn-success"><?= $lang['return_book'] ?></button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?= $lang['close'] ?></button>
         </div>
       </form>
     </div>
@@ -207,44 +202,76 @@ foreach ($results as $result):
 
 <!-- Issue Book Modal -->
 <div class="modal fade" id="issueBookModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-lg modal-dialog-centered">
+  <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
       <form method="post" id="issueBookForm">
         <div class="modal-header bg-primary text-white">
-          <h5 class="modal-title">Issue a New Book</h5>
+          <h5 class="modal-title"><?= $lang['issue_book'] ?></h5>
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body">
 
           <!-- Student Details -->
-          <h6>Student Details</h6>
-          <hr>
+          <h6><?= $lang['student_details'] ?></h6>
           <div class="mb-3">
-            <label for="issueStudentId">Student ID <span class="text-danger">*</span></label>
+            <label for="issueStudentId"><?= $lang['student_id'] ?> <span class="text-danger">*</span></label>
             <input type="text" class="form-control" name="studentid" id="issueStudentId" onBlur="getstudent()" autocomplete="off" required>
           </div>
-          <div id="get_student_name" class="mb-3" style="font-size:16px;"></div>
+          <!-- Student info display -->
+          <div id="get_student_name" class="mb-3 p-3 border rounded" style="background-color: #f8f9fa; display: none;">
+            <div class="row mb-1">
+              <div class="col-md-4"><?= $lang['student_name'] ?></strong></div>
+              <div class="col-md-8" id="displayStudentName">:</div>
+            </div>
+            <div class="row mb-1">
+              <div class="col-md-4"><?= $lang['email'] ?></strong></div>
+              <div class="col-md-8" id="displayStudentEmail">:</div>
+            </div>
+            <div class="row mb-1">
+              <div class="col-md-4"><?= $lang['contact'] ?></strong></div>
+              <div class="col-md-8" id="displayStudentContact">:</div>
+            </div>
+          </div>
+
 
           <!-- Book Details -->
-          <h6>Book Details</h6>
-          <hr>
+          <h6><?= $lang['book_details'] ?></h6>
+
           <div class="mb-3">
-            <label for="issueBookId">ISBN Number or Book Title <span class="text-danger">*</span></label>
-            <input type="text" class="form-control" name="bookid" id="issueBookId" onBlur="getbook()" required>
+              <label for="issueBookId"><?= $lang['isbn_or_title'] ?> <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" name="bookid" id="issueBookId" onBlur="getbook()" autocomplete="off" required>
           </div>
-          <div id="get_book_name" class="mb-3"></div>
+
+          <!-- Book info display -->
+          <div id="get_book_name" class="mb-3 p-3 border rounded" style="background-color: #f8f9fa; display: none;">
+              <div class="row mb-1">
+                  <div class="col-md-4"><strong><?= $lang['book_name'] ?>:</strong></div>
+                  <div class="col-md-8" id="displayBookName"></div>
+              </div>
+              <div class="row mb-1">
+                  <div class="col-md-4"><strong><?= $lang['isbn'] ?>:</strong></div>
+                  <div class="col-md-8" id="displayBookISBN"></div>
+              </div>
+              <div class="row mb-1">
+                  <div class="col-md-4"><strong><?= $lang['author'] ?>:</strong></div>
+                  <div class="col-md-8" id="displayBookAuthor"></div>
+              </div>
+              <div class="row mb-1">
+                  <div class="col-md-4"><strong><?= $lang['image'] ?>:</strong></div>
+                  <div class="col-md-8"><img id="displayBookImage" src="" width="80"></div>
+              </div>
+          </div>
 
           <!-- Remark -->
-          <h6>Remark</h6>
-          <hr>
+          <h6><?= $lang['remark'] ?></h6>
           <div class="mb-3">
-            <textarea class="form-control" name="aremark" id="aremark" placeholder="Enter remarks here" required></textarea>
+            <textarea class="form-control" name="aremark" id="aremark" placeholder="<?= $lang['enter_remarks_here'] ?>" required></textarea>
           </div>
 
         </div>
         <div class="modal-footer">
-          <button type="submit" name="issue" class="btn btn-info text-white">Issue Book</button>
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+          <button type="submit" name="issue" class="btn btn-primary text-white"><?= $lang['issue_book'] ?></button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?= $lang['close'] ?></button>
         </div>
       </form>
     </div>
@@ -266,7 +293,6 @@ $(document).ready(function() {
         "columnDefs": [{ "orderable": false, "targets": 6 }]
     });
 
-    // Populate Edit Modal
     $('.editIssuedBookBtn').click(function() {
         var btn = $(this);
         $('#editRid').val(btn.data('rid'));
@@ -295,26 +321,94 @@ $(document).ready(function() {
     });
 });
 
-// AJAX functions for student/book info
 function getstudent() {
-    $("#loaderIcon").show();
+    var studentId = $("#issueStudentId").val().trim();
+    if(studentId === '') {
+        $("#get_student_name").hide();
+        return;
+    }
+
     $.ajax({
         url: "get_student.php",
         type: "POST",
-        data: { studentid: $("#issueStudentId").val() },
-        success: function(data){ $("#get_student_name").html(data); $("#loaderIcon").hide(); }
+        data: { studentid: studentId },
+        dataType: "json",
+        success: function(data){
+            $("#get_student_name").show();
+            if(data.success) {
+                $("#displayStudentName").text(data.name);
+                $("#displayStudentEmail").text(data.email);
+                $("#displayStudentContact").text(data.contact);
+                $("#submit").prop('disabled', false);
+            } else {
+                $("#displayStudentName").text(data.msg);
+                $("#displayStudentEmail").text('');
+                $("#displayStudentContact").text('');
+                $("#submit").prop('disabled', true);
+            }
+        },
+        error: function() {
+            $("#displayStudentName").text("Error fetching student info");
+            $("#displayStudentEmail").text('');
+            $("#displayStudentContact").text('');
+            $("#submit").prop('disabled', true);
+        }
     });
 }
 
 function getbook() {
-    $("#loaderIcon").show();
+    var bookId = $("#issueBookId").val().trim();
+    if (bookId == '') {
+        $("#get_book_name").hide();
+        return;
+    }
+
+    $("#get_book_name").show();
     $.ajax({
         url: "get_book.php",
         type: "POST",
-        data: { bookid: $("#issueBookId").val() },
-        success: function(data){ $("#get_book_name").html(data); $("#loaderIcon").hide(); }
+        data: { bookid: bookId },
+        success: function(data) {
+            $("#get_book_name").html(data);
+
+            // Handle selection of a book
+            $(".selectBookBtn").click(function() {
+              var card = $(this).closest(".card");
+
+              // Hide the select button
+              $(this).hide();
+
+              // Remove all other cards
+              $("#get_book_name .card").not(card).remove();
+
+              // Remove previous hidden inputs
+              $("#get_book_name input[name='bookid']").remove();
+
+              // Append hidden input inside card footer
+              var selectedBookId = $(this).data("bookid");
+              card.find(".card-footer").append('<input type="hidden" name="bookid" value="' + selectedBookId + '" required>');
+
+              // Add Cancel button below (if not exists)
+              if (card.find(".cancelSelectBtn").length == 0) {
+                  card.find(".card-footer").append('<button type="button" class="btn btn-danger mt-2 w-100 btn-sm cancelSelectBtn"><?= $lang["cancel"] ?></button>');
+              }
+
+              // Handle Cancel click
+              card.find(".cancelSelectBtn").click(function() {
+                  // Remove hidden input
+                  card.find('input[name="bookid"]').remove();
+                  // Remove Cancel button
+                  $(this).remove();
+                  // Show Select button again
+                  card.find(".selectBookBtn").show();
+                  // Reload the book list
+                  getbook();
+              });
+          });
+        }
     });
 }
+
 
 // Toast
 <?php if($toast): ?>
@@ -324,7 +418,6 @@ toast.show();
 <?php endif; ?>
 </script>
 
-<!-- Toast HTML -->
 <div class="position-fixed top-0 end-0 p-3 toast-container">
 <?php if($toast): ?>
     <div id="liveToast" class="toast align-items-center text-bg-<?= $toast['type'] ?> border-0" role="alert">
@@ -335,6 +428,5 @@ toast.show();
     </div>
 <?php endif; ?>
 </div>
-
 </body>
 </html>

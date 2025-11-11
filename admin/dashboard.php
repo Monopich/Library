@@ -1,16 +1,23 @@
 <?php
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 error_reporting(0);
-include('includes/config.php');
+include_once('includes/config.php');
+
 if (strlen($_SESSION['alogin']) == 0) {
     header('location:index.php');
-} else { ?>
+    exit;
+}
+
+$currentPage = basename($_SERVER['PHP_SELF']);
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Library Management System | Admin Dashboard</title>
+    <title><?= $lang['dashboard'] ?? 'Dashboard' ?> | Library Management System</title>
 
     <!-- BOOTSTRAP 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -30,27 +37,28 @@ if (strlen($_SESSION['alogin']) == 0) {
         <div class="container">
             <div class="row mb-4">
                 <div class="col-12">
-                    <h4 class="fw-bold">ADMIN DASHBOARD</h4>
+                    <h4 class="fw-bold"><?= $lang['dashboard'] ?? 'ADMIN DASHBOARD' ?></h4>
                 </div>
             </div>
 
             <div class="row g-3">
+
                 <!-- Books Listed -->
                 <a href="manage-books.php" class="col-md-3 col-sm-6 text-decoration-none">
                     <div class="alert alert-success text-center py-4 rounded-3">
                         <i class="fa-solid fa-book fa-3x mb-2"></i>
                         <?php
-                        $sql = "SELECT id FROM tblbooks WHERE bookQty > 0 ";
+                        $sql = "SELECT id FROM tblbooks WHERE bookQty > 0";
                         $query = $dbh->prepare($sql);
                         $query->execute();
                         $listdbooks = $query->rowCount();
                         ?>
-                        <h3><?php echo htmlentities($listdbooks); ?></h3>
-                        Books List
+                        <h3><?= htmlentities($listdbooks) ?></h3>
+                        <?= $lang['books_list'] ?? 'Books List' ?>
                     </div>
                 </a>
 
-                <!-- Books Listed -->
+                <!-- EBooks Listed -->
                 <a href="manage-ebooks.php" class="col-md-3 col-sm-6 text-decoration-none">
                     <div class="alert alert-info text-center py-4 rounded-3">
                         <i class="fa-solid fa-book fa-3x mb-2"></i>
@@ -58,10 +66,10 @@ if (strlen($_SESSION['alogin']) == 0) {
                         $sql = "SELECT id FROM tblbooks WHERE BookFile != ''";
                         $query = $dbh->prepare($sql);
                         $query->execute();
-                        $listdbooks = $query->rowCount();
+                        $listebooks = $query->rowCount();
                         ?>
-                        <h3><?php echo htmlentities($listdbooks); ?></h3>
-                        EBooks List
+                        <h3><?= htmlentities($listebooks) ?></h3>
+                        <?= $lang['ebooks_list'] ?? 'EBooks List' ?>
                     </div>
                 </a>
 
@@ -75,8 +83,8 @@ if (strlen($_SESSION['alogin']) == 0) {
                         $query2->execute();
                         $returnedbooks = $query2->rowCount();
                         ?>
-                        <h3><?php echo htmlentities($returnedbooks); ?></h3>
-                        Books Not Returned Yet
+                        <h3><?= htmlentities($returnedbooks) ?></h3>
+                        <?= $lang['books_not_returned'] ?? 'Books Not Returned Yet' ?>
                     </div>
                 </a>
 
@@ -90,8 +98,8 @@ if (strlen($_SESSION['alogin']) == 0) {
                         $query3->execute();
                         $regstds = $query3->rowCount();
                         ?>
-                        <h3><?php echo htmlentities($regstds); ?></h3>
-                        Registered Users
+                        <h3><?= htmlentities($regstds) ?></h3>
+                        <?= $lang['registered_users'] ?? 'Registered Users' ?>
                     </div>
                 </a>
 
@@ -103,10 +111,10 @@ if (strlen($_SESSION['alogin']) == 0) {
                         $sq4 = "SELECT id FROM tblauthors";
                         $query4 = $dbh->prepare($sq4);
                         $query4->execute();
-                        $listdathrs = $query4->rowCount();
+                        $listdauthors = $query4->rowCount();
                         ?>
-                        <h3><?php echo htmlentities($listdathrs); ?></h3>
-                        Authors List
+                        <h3><?= htmlentities($listdauthors) ?></h3>
+                        <?= $lang['authors_list'] ?? 'Authors List' ?>
                     </div>
                 </a>
 
@@ -120,10 +128,11 @@ if (strlen($_SESSION['alogin']) == 0) {
                         $query5->execute();
                         $listdcats = $query5->rowCount();
                         ?>
-                        <h3><?php echo htmlentities($listdcats); ?></h3>
-                        Categories List
+                        <h3><?= htmlentities($listdcats) ?></h3>
+                        <?= $lang['categories_list'] ?? 'Categories List' ?>
                     </div>
                 </a>
+
             </div>
         </div>
     </div>
@@ -137,4 +146,3 @@ if (strlen($_SESSION['alogin']) == 0) {
     <script src="assets/js/custom.js"></script>
 </body>
 </html>
-<?php } ?>
