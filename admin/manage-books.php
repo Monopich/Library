@@ -3,10 +3,16 @@ session_start();
 error_reporting(0);
 include('includes/config.php');
 
+// Check if admin logged in
 if (strlen($_SESSION['alogin']) == 0) {
     header('location:index.php');
     exit;
 }
+
+// Set current language texts
+// config.php should include the proper file: en.php or kh.php
+// $lang array is available from included file
+$t = $lang; 
 
 // Add Book
 if (isset($_POST['addBook'])) {
@@ -32,9 +38,9 @@ if (isset($_POST['addBook'])) {
     $query->bindParam(':qty', $qty, PDO::PARAM_STR);
 
     if($query->execute()){
-        $_SESSION['toast'] = ['msg' => 'Book added successfully!', 'type' => 'success'];
+        $_SESSION['toast'] = ['msg' => $t['book_added'], 'type' => 'success'];
     } else {
-        $_SESSION['toast'] = ['msg' => 'Failed to add book!', 'type' => 'danger'];
+        $_SESSION['toast'] = ['msg' => $t['book_add_failed'], 'type' => 'danger'];
     }
     header('location:manage-books.php');
     exit;
@@ -51,9 +57,8 @@ if (isset($_POST['updateBook'])) {
     $qty = $_POST['qty'];
 
     $sql = "UPDATE tblbooks SET BookName=:bookName, CatId=:catId, AuthorId=:authorId, 
-            ISBNNumber=:isbn, BookPrice=:price, bookqty=:qty";
+            ISBNNumber=:isbn, BookPrice=:price, bookQty=:qty";
 
-    // Update image if uploaded
     if(!empty($_FILES['bookImage']['name'])){
         $bookImage = $_FILES['bookImage']['name'];
         move_uploaded_file($_FILES['bookImage']['tmp_name'], "bookimg/".$bookImage);
@@ -75,9 +80,9 @@ if (isset($_POST['updateBook'])) {
     $query->bindParam(':id', $bookId, PDO::PARAM_INT);
 
     if($query->execute()){
-        $_SESSION['toast'] = ['msg' => 'Book updated successfully!', 'type' => 'success'];
+        $_SESSION['toast'] = ['msg' => $t['book_updated'], 'type' => 'success'];
     } else {
-        $_SESSION['toast'] = ['msg' => 'Failed to update book!', 'type' => 'danger'];
+        $_SESSION['toast'] = ['msg' => $t['book_update_failed'], 'type' => 'danger'];
     }
     header('location:manage-books.php');
     exit;
@@ -90,9 +95,9 @@ if (isset($_GET['del'])) {
     $query = $dbh->prepare($sql);
     $query->bindParam(':id', $id, PDO::PARAM_INT);
     if($query->execute()){
-        $_SESSION['toast'] = ['msg' => 'Book deleted successfully!', 'type' => 'success'];
+        $_SESSION['toast'] = ['msg' => $t['book_deleted'], 'type' => 'success'];
     } else {
-        $_SESSION['toast'] = ['msg' => 'Failed to delete book!', 'type' => 'danger'];
+        $_SESSION['toast'] = ['msg' => $t['book_delete_failed'], 'type' => 'danger'];
     }
     header('location:manage-books.php');
     exit;
@@ -106,7 +111,7 @@ unset($_SESSION['toast']);
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Library Management System | Manage Books</title>
+<title><?php echo $t['manage_books']; ?></title>
 
 <!-- Bootstrap 5 CSS -->
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -114,46 +119,27 @@ unset($_SESSION['toast']);
 <link href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" rel="stylesheet">
 <!-- Select2 CSS -->
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-<!-- Select2 JS -->
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
 <style>
 body { background-color: #f8f9fa; }
 .table thead th, .table tbody td { text-align: center; vertical-align: middle; }
 .toast-container { z-index: 1100; }
-.table thead th {
-    background-color: #007bff;
-    color: #fff;
-    text-align: center;
-}
-.table tbody td {
-    vertical-align: middle;
-    text-align: center;
-}
-.table {
-    table-layout: fixed;
-    width: 100%;
-}
-.table img {
-    width: 100%;
-    height: auto;
-    object-fit: cover;
-}
-.table th:nth-child(1) { width: 5%; } /* # */
-.table th:nth-child(2) { width: 10%; } /* Cover */
-.table th:nth-child(3) { width: 20%; } /* Book Name */
-.table th:nth-child(4) { width: 10%; } /* Category */
-.table th:nth-child(5) { width: 10%; } /* Author */
-.table th:nth-child(6) { width: 10%; } /* ISBN */
-.table th:nth-child(7) { width: 10%; } /* Price */
-.table th:nth-child(8) { width: 10%; } /* Quantity */
-.table th:nth-child(9) { width: 15%; } /* Action */
+.table thead th { background-color: #007bff; color: #fff; }
+.table tbody td { vertical-align: middle; text-align: center; }
+.table { table-layout: fixed; width: 100%; }
+.table img { width: 100%; height: auto; object-fit: cover; }
+.table th:nth-child(1) { width: 5%; }
+.table th:nth-child(2) { width: 10%; }
+.table th:nth-child(3) { width: 20%; }
+.table th:nth-child(4) { width: 10%; }
+.table th:nth-child(5) { width: 10%; }
+.table th:nth-child(6) { width: 10%; }
+.table th:nth-child(7) { width: 10%; }
+.table th:nth-child(8) { width: 10%; }
+.table th:nth-child(9) { width: 15%; }
 .dataTables_wrapper .dataTables_filter, .dataTables_wrapper .dataTables_info {
-    position: sticky;
-    top: 0;
-    background: white;
-    z-index: 10;
-    padding: 10px;
+    position: sticky; top: 0; background: white; z-index: 10; padding: 10px;
 }
 </style>
 </head>
@@ -161,28 +147,27 @@ body { background-color: #f8f9fa; }
 
 <?php include('includes/header.php'); ?>
 
-
 <div class="container my-3" style="padding-bottom: 50px;">
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h2 class="fw-bold text-primary">Manage Books</h2>
+        <h2 class="fw-bold text-primary"><?php echo $t['manage_books']; ?></h2>
         <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addBookModal">
-            <i class="bi bi-plus-circle"></i> Add Book
+            <i class="bi bi-plus-circle"></i> <?php echo $t['add_book']; ?>
         </button>
     </div>
 
-    <div class="table-responsive shadow-sm rounded bg-white p-3"  >
+    <div class="table-responsive shadow-sm rounded bg-white p-3">
         <table class="table table-striped table-hover table-bordered align-middle" id="booksTable">
-            <thead class="table-primary text-white">
+            <thead>
                 <tr>
                     <th>#</th>
-                    <th>Cover</th>
-                    <th>Book Name</th>
-                    <th>Category</th>
-                    <th>Author</th>
-                    <th>ISBN</th>
-                    <th>Price</th>
-                    <th>Quantity</th>
-                    <th>Action</th>
+                    <th><?php echo $t['cover']; ?></th>
+                    <th><?php echo $t['book_name']; ?></th>
+                    <th><?php echo $t['category']; ?></th>
+                    <th><?php echo $t['author']; ?></th>
+                    <th><?php echo $t['isbn']; ?></th>
+                    <th><?php echo $t['price']; ?></th>
+                    <th><?php echo $t['quantity']; ?></th>
+                    <th><?php echo $t['delete_book']; ?></th>
                 </tr>
             </thead>
             <tbody>
@@ -219,10 +204,9 @@ foreach ($results as $result):
             data-price="<?php echo htmlentities($result->BookPrice); ?>"
             data-qty="<?php echo htmlentities($result->bookQty); ?>"
             data-bs-toggle="modal" data-bs-target="#editBookModal">
-            Edit 
-            <i class="bi bi-pencil-square"></i>
+            <?php echo $t['edit_book']; ?> <i class="bi bi-pencil-square"></i>
         </button>
-        <button class="btn btn-danger btn-sm deleteBookBtn" data-id="<?php echo $result->bookid; ?>" data-bs-toggle="modal" data-bs-target="#deleteBookModal">Delete <i class="bi bi-trash"></i></button>
+        <button class="btn btn-danger btn-sm deleteBookBtn" data-id="<?php echo $result->bookid; ?>" data-bs-toggle="modal" data-bs-target="#deleteBookModal"><?php echo $t['delete_book']; ?> <i class="bi bi-trash"></i></button>
     </td>
 </tr>
 <?php $cnt++; endforeach; ?>
@@ -233,73 +217,70 @@ foreach ($results as $result):
 
 <?php include('includes/footer.php'); ?>
 
-<?php
-// Fetch categories alphabetically
-$catSql = "SELECT id, CategoryName FROM tblcategory ORDER BY CategoryName ASC";
-$catQuery = $dbh->prepare($catSql);
-$catQuery->execute();
-$categories = $catQuery->fetchAll(PDO::FETCH_OBJ);
-
-// Fetch authors alphabetically
-$authorSql = "SELECT id, AuthorName FROM tblauthors ORDER BY AuthorName ASC";
-$authorQuery = $dbh->prepare($authorSql);
-$authorQuery->execute();
-$authors = $authorQuery->fetchAll(PDO::FETCH_OBJ);
-?>
-
 <!-- Add Book Modal -->
 <div class="modal fade" id="addBookModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <form method="post" enctype="multipart/form-data">
                 <div class="modal-header bg-success text-white">
-                    <h5 class="modal-title">Add Book</h5>
+                    <h5 class="modal-title"><?php echo $t['add_book']; ?></h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label">Book Name</label>
+                        <label class="form-label"><?php echo $t['book_name']; ?></label>
                         <input type="text" name="bookName" class="form-control" required>
                     </div>
                     <div class="mb-3">
-                        <label for="catId" class="form-label">Category</label>
-                        <select class="form-select select2" name="catId" id="catId" required>
-                            <option value="">Select Category</option>
-                            <?php foreach ($categories as $cat): ?>
-                                <option value="<?php echo $cat->id; ?>"><?php echo htmlentities($cat->CategoryName); ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="authorId" class="form-label">Author</label>
-                        <select class="form-select select2" name="authorId" id="authorId" required>
-                            <option value="">Select Author</option>
-                            <?php foreach ($authors as $auth): ?>
-                                <option value="<?php echo $auth->id; ?>"><?php echo htmlentities($auth->AuthorName); ?></option>
-                            <?php endforeach; ?>
+                        <label class="form-label"><?php echo $t['category']; ?></label>
+                        <select class="form-select select2" name="catId" required>
+                            <option value=""><?php echo $t['category']; ?></option>
+                            <?php
+                            $catSql = "SELECT id, CategoryName FROM tblcategory ORDER BY CategoryName ASC";
+                            $catQuery = $dbh->prepare($catSql);
+                            $catQuery->execute();
+                            $categories = $catQuery->fetchAll(PDO::FETCH_OBJ);
+                            foreach ($categories as $cat) {
+                                echo "<option value='{$cat->id}'>".htmlentities($cat->CategoryName)."</option>";
+                            }
+                            ?>
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">ISBN</label>
+                        <label class="form-label"><?php echo $t['author']; ?></label>
+                        <select class="form-select select2" name="authorId" required>
+                            <option value=""><?php echo $t['author']; ?></option>
+                            <?php
+                            $authorSql = "SELECT id, AuthorName FROM tblauthors ORDER BY AuthorName ASC";
+                            $authorQuery = $dbh->prepare($authorSql);
+                            $authorQuery->execute();
+                            $authors = $authorQuery->fetchAll(PDO::FETCH_OBJ);
+                            foreach ($authors as $author) {
+                                echo "<option value='{$author->id}'>".htmlentities($author->AuthorName)."</option>";
+                            }
+                            ?>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label"><?php echo $t['isbn']; ?></label>
                         <input type="text" name="isbn" class="form-control" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Price</label>
+                        <label class="form-label"><?php echo $t['price']; ?></label>
                         <input type="text" name="price" class="form-control" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Quantity</label>
+                        <label class="form-label"><?php echo $t['quantity']; ?></label>
                         <input type="text" name="qty" class="form-control" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Book Image</label>
+                        <label class="form-label"><?php echo $t['book_image']; ?></label>
                         <input type="file" name="bookImage" class="form-control" required>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="submit" name="addBook" class="btn btn-success">Add</button>
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" name="addBook" class="btn btn-success"><?php echo $t['add']; ?></button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php echo $t['cancel']; ?></button>
                 </div>
             </form>
         </div>
@@ -312,146 +293,125 @@ $authors = $authorQuery->fetchAll(PDO::FETCH_OBJ);
         <div class="modal-content">
             <form method="post" enctype="multipart/form-data" id="editBookForm">
                 <div class="modal-header bg-primary text-white">
-                    <h5 class="modal-title">Edit Book</h5>
+                    <h5 class="modal-title"><?php echo $t['edit_book']; ?></h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <input type="hidden" name="bookId" id="editBookId">
                     <div class="mb-3">
-                        <label class="form-label">Book Name</label>
+                        <label class="form-label"><?php echo $t['book_name']; ?></label>
                         <input type="text" name="bookName" id="editBookName" class="form-control" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Category</label>
-                        <select name="catId" id="editCatId" class="form-select" required>
-                            <option value="">Select Category</option>
-                            <?php
-                            // Fetch categories alphabetically
-                            $catSql = "SELECT id, CategoryName FROM tblcategory ORDER BY CategoryName ASC";
-                            $catQuery = $dbh->prepare($catSql);
-                            $catQuery->execute();
-                            $cats = $catQuery->fetchAll(PDO::FETCH_OBJ);
-
-                            foreach($cats as $cat) {
-                                // If this is the current book's category, mark as selected
-                                $selected = (isset($result->CatId) && $result->CatId == $cat->id) ? "selected" : "";
-                                echo "<option value='{$cat->id}' $selected>{$cat->CategoryName}</option>";
-                            }
-                            ?>
-                        </select>
+                        <label class="form-label"><?php echo $t['category']; ?></label>
+                        <select name="catId" id="editCatId" class="form-select" required></select>
                     </div>
-
                     <div class="mb-3">
-                        <label class="form-label">Author</label>
-                        <select name="authorId" id="editAuthorId" class="form-select" required>
-                            <option value="">Select Author</option>
-                            <?php
-                            // Fetch authors alphabetically
-                            $authorSql = "SELECT id, AuthorName FROM tblauthors ORDER BY AuthorName ASC";
-                            $authorQuery = $dbh->prepare($authorSql);
-                            $authorQuery->execute();
-                            $authors = $authorQuery->fetchAll(PDO::FETCH_OBJ);
-
-                            foreach($authors as $author) {
-                                // If this is the current book's author, mark as selected
-                                $selected = (isset($result->AuthorId) && $result->AuthorId == $author->id) ? "selected" : "";
-                                echo "<option value='{$author->id}' $selected>{$author->AuthorName}</option>";
-                            }
-                            ?>
-                        </select>
+                        <label class="form-label"><?php echo $t['author']; ?></label>
+                        <select name="authorId" id="editAuthorId" class="form-select" required></select>
                     </div>
-
                     <div class="mb-3">
-                        <label class="form-label">ISBN</label>
+                        <label class="form-label"><?php echo $t['isbn']; ?></label>
                         <input type="text" name="isbn" id="editISBN" class="form-control" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Price</label>
+                        <label class="form-label"><?php echo $t['price']; ?></label>
                         <input type="text" name="price" id="editPrice" class="form-control" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Quantity</label>
+                        <label class="form-label"><?php echo $t['quantity']; ?></label>
                         <input type="text" name="qty" id="editQty" class="form-control" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Book Image (Optional)</label>
+                        <label class="form-label"><?php echo $t['book_image']; ?> (Optional)</label>
                         <input type="file" name="bookImage" class="form-control">
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="submit" name="updateBook" class="btn btn-primary">Update</button>
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" name="updateBook" class="btn btn-primary"><?php echo $t['update']; ?></button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php echo $t['cancel']; ?></button>
                 </div>
             </form>
         </div>
     </div>
 </div>
 
-<!-- Delete Confirmation Modal -->
+<!-- Delete Modal -->
 <div class="modal fade" id="deleteBookModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title">Confirm Delete</h5>
+                <h5 class="modal-title"><?php echo $t['delete_book']; ?></h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                Are you sure you want to delete this book?
+                <?php echo $t['confirm_delete']; ?>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <a href="#" class="btn btn-danger" id="confirmDeleteBtn">Delete</a>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php echo $t['cancel']; ?></button>
+                <a href="#" class="btn btn-danger" id="confirmDeleteBtn"><?php echo $t['delete_book']; ?></a>
             </div>
         </div>
     </div>
 </div>
 
-
 <!-- Toast -->
-<div class="position-fixed bottom-0 end-0 p-3 toast-container">
+<div class=" position-fixed top-0 end-0 p-3 toast-container">
 <?php if($toast): ?>
-    <div id="liveToast" class="toast align-items-center text-bg-<?php echo $toast['type']; ?> border-0" role="alert">
-        <div class="d-flex">
-            <div class="toast-body"><?php echo htmlentities($toast['msg']); ?></div>
-            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-        </div>
+<div class="toast align-items-center text-white bg-<?php echo $toast['type']; ?> border-0 show" role="alert" aria-live="assertive" aria-atomic="true">
+    <div class="d-flex">
+        <div class="toast-body"><?php echo htmlentities($toast['msg']); ?></div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
     </div>
+</div>
 <?php endif; ?>
 </div>
 
-<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<!-- JS -->
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
 $(document).ready(function() {
     $('#booksTable').DataTable({
-        "columnDefs": [{ "orderable": false, "targets": 8 }]
-    });
+    responsive: true,
+    pageLength: 10,
+    lengthMenu: [5, 10, 25, 50, 100],
+    language: {
+        search: "<?= $t['search'] ?? 'Search' ?>",
+        lengthMenu: "<?= $t['show'] ?? 'Show' ?> _MENU_ entries",
+        info: "<?= $t['showing'] ?? 'Showing' ?> _START_ to _END_ of _TOTAL_ entries",
+        paginate: {
+            previous: "<?= $t['previous'] ?? 'Previous' ?>",
+            next: "<?= $t['next'] ?? 'Next' ?>"
+        }
+    }
+});
+    $('.select2').select2({ dropdownParent: $('.modal') });
 
-    // Toast
-    <?php if($toast): ?>
-    var toastEl = document.getElementById('liveToast');
-    var toast = new bootstrap.Toast(toastEl, { delay: 4000 });
-    toast.show();
-    <?php endif; ?>
-
-    // Edit Book delegated handler
-    $(document).on('click', '.editBookBtn', function() {
-        $('#editBookId').val($(this).data('id'));
+    // Edit book
+    $('.editBookBtn').on('click', function(){
+        const id = $(this).data('id');
+        $('#editBookId').val(id);
         $('#editBookName').val($(this).data('name'));
-        $('#editCatId').val($(this).data('cat-id')).trigger('change');
-        $('#editAuthorId').val($(this).data('author-id')).trigger('change');
         $('#editISBN').val($(this).data('isbn'));
         $('#editPrice').val($(this).data('price'));
         $('#editQty').val($(this).data('qty'));
+
+        // Load categories and authors into edit modal
+        const catId = $(this).data('cat-id');
+        const authorId = $(this).data('author-id');
+
+        $.get('ajax-load-category.php', function(data){ $('#editCatId').html(data).val(catId); });
+        $.get('ajax-load-author.php', function(data){ $('#editAuthorId').html(data).val(authorId); });
     });
 
-    // Delete Book delegated handler
-    $(document).on('click', '.deleteBookBtn', function() {
-        const bookId = $(this).data('id');
-        $('#confirmDeleteBtn').attr('href', 'manage-books.php?del=' + bookId);
+    // Delete book
+    $('.deleteBookBtn').on('click', function(){
+        const id = $(this).data('id');
+        $('#confirmDeleteBtn').attr('href', 'manage-books.php?del=' + id);
     });
 });
 </script>

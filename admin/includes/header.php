@@ -1,9 +1,15 @@
 <?php
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+include('includes/config.php'); // make sure this file path is correct
+
+$currentPage = basename($_SERVER['PHP_SELF']);
 ?>
 <!-- HEADER -->
 <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm sticky-top" style="border-bottom: 4px solid #007bff; z-index: 1030;">
-    <div class="container-fluid justify-content-center w-auto">
+    <div class="container-fluid justify-content-between w-auto">
+
         <!-- Logo -->
         <a class="navbar-brand d-flex align-items-center me-4" href="dashboard.php">
             <img src="assets/img/logo.png" alt="Logo" height="60" class="me-2">
@@ -15,37 +21,77 @@ session_start();
         </button>
 
         <!-- Navbar links -->
-        <div class="collapse navbar-collapse" id="adminNavbar">
-            <ul class="navbar-nav align-items-lg-center">
+        <div class="collapse navbar-collapse justify-content-center" id="adminNavbar">
+            <ul class="navbar-nav align-items-lg-center mb-2 mb-lg-0">
+
                 <li class="nav-item mx-1">
-                    <a class="nav-link text-primary fw-medium px-3 py-2 rounded hover-bg <?php echo basename($_SERVER['PHP_SELF']) == 'dashboard.php' ? 'active' : ''; ?>" href="dashboard.php">Dashboard</a>
+                    <a class="nav-link text-primary fw-medium px-3 py-2 rounded hover-bg <?= $currentPage == 'dashboard.php' ? 'active' : ''; ?>" href="dashboard.php">
+                        <?= $lang['admin_dashboard'] ?? 'Admin Dashboard' ?>
+                    </a>
                 </li>
+
                 <li class="nav-item mx-1">
-                    <a class="nav-link text-primary fw-medium px-3 py-2 rounded hover-bg <?php echo basename($_SERVER['PHP_SELF']) == 'manage-categories.php' ? 'active' : ''; ?>" href="manage-categories.php">Categories</a>
+                    <a class="nav-link text-primary fw-medium px-3 py-2 rounded hover-bg <?= $currentPage == 'manage-categories.php' ? 'active' : ''; ?>" href="manage-categories.php">
+                        <?= $lang['categories'] ?? 'Categories' ?>
+                    </a>
                 </li>
+
                 <li class="nav-item mx-1">
-                    <a class="nav-link text-primary fw-medium px-3 py-2 rounded hover-bg <?php echo basename($_SERVER['PHP_SELF']) == 'manage-authors.php' ? 'active' : ''; ?>" href="manage-authors.php">Authors</a>
+                    <a class="nav-link text-primary fw-medium px-3 py-2 rounded hover-bg <?= $currentPage == 'manage-authors.php' ? 'active' : ''; ?>" href="manage-authors.php">
+                        <?= $lang['authors'] ?? 'Authors' ?>
+                    </a>
                 </li>
+
                 <li class="nav-item mx-1">
-                    <a class="nav-link text-primary fw-medium px-3 py-2 rounded hover-bg <?php echo basename($_SERVER['PHP_SELF']) == 'manage-books.php' ? 'active' : ''; ?>" href="manage-books.php">Books</a>
+                    <a class="nav-link text-primary fw-medium px-3 py-2 rounded hover-bg <?= $currentPage == 'manage-books.php' ? 'active' : ''; ?>" href="manage-books.php">
+                        <?= $lang['books'] ?? 'Books' ?>
+                    </a>
                 </li>
+
                 <li class="nav-item mx-1">
-                    <a class="nav-link text-primary fw-medium px-3 py-2 rounded hover-bg <?php echo basename($_SERVER['PHP_SELF']) == 'manage-ebooks.php' ? 'active' : ''; ?>" href="manage-ebooks.php">EBooks</a>
+                    <a class="nav-link text-primary fw-medium px-3 py-2 rounded hover-bg <?= $currentPage == 'manage-ebooks.php' ? 'active' : ''; ?>" href="manage-ebooks.php">
+                        <?= $lang['ebooks'] ?? 'EBooks' ?>
+                    </a>
                 </li>
+
                 <li class="nav-item mx-1">
-                    <a class="nav-link text-primary fw-medium px-3 py-2 rounded hover-bg <?php echo basename($_SERVER['PHP_SELF']) == 'manage-issued-books.php' ? 'active' : ''; ?>" href="manage-issued-books.php">Issued Books</a>
+                    <a class="nav-link text-primary fw-medium px-3 py-2 rounded hover-bg <?= $currentPage == 'manage-issued-books.php' ? 'active' : ''; ?>" href="manage-issued-books.php">
+                        <?= $lang['issued_books'] ?? 'Issued Books' ?>
+                    </a>
                 </li>
+
                 <li class="nav-item mx-1">
-                    <a class="nav-link text-primary fw-medium px-3 py-2 rounded hover-bg <?php echo basename($_SERVER['PHP_SELF']) == 'reg-students.php' ? 'active' : ''; ?>" href="reg-students.php">Students</a>
+                    <a class="nav-link text-primary fw-medium px-3 py-2 rounded hover-bg <?= $currentPage == 'reg-students.php' ? 'active' : ''; ?>" href="reg-students.php">
+                        <?= $lang['students'] ?? 'Students' ?>
+                    </a>
                 </li>
+
                 <li class="nav-item mx-1">
-                    <a class="nav-link text-primary fw-medium px-3 py-2 rounded hover-bg <?php echo basename($_SERVER['PHP_SELF']) == 'change-password.php' ? 'active' : ''; ?>" href="change-password.php">Change Password</a>
+                    <a class="nav-link text-primary fw-medium px-3 py-2 rounded hover-bg <?= $currentPage == 'change-password.php' ? 'active' : ''; ?>" href="change-password.php">
+                        <?= $lang['change_password'] ?? 'Change Password' ?>
+                    </a>
                 </li>
+
                 <li class="nav-item mx-1">
-                    <a class="nav-link text-primary fw-medium px-3 py-2 rounded hover-bg <?php echo basename($_SERVER['PHP_SELF']) == 'help.php' ? 'active' : ''; ?>" href="help.php">Help</a>
+                    <a class="nav-link text-primary fw-medium px-3 py-2 rounded hover-bg <?= $currentPage == 'help.php' ? 'active' : ''; ?>" href="help.php">
+                        <?= $lang['help'] ?? 'Help' ?>
+                    </a>
                 </li>
+
+                <!-- Language Switcher -->
+                <div class="d-flex align-items-center mx-1 mr-3">
+                    <form method="get" class="m-0">
+                        <select name="lang" onchange="this.form.submit()" class="form-select form-select-sm border-primary text-primary">
+                            <option value="en" <?= $_SESSION['lang'] === 'en' ? 'selected' : '' ?>>🇬🇧 English</option>
+                            <option value="kh" <?= $_SESSION['lang'] === 'kh' ? 'selected' : '' ?>>🇰🇭 ភាសាខ្មែរ</option>
+                        </select>
+                    </form>
+                </div>
+
                 <li class="nav-item mx-1">
-                    <a class="btn btn-danger fw-bold px-4" href="logout.php">Log Out</a>
+                    <a class="btn btn-danger fw-bold px-4 btn-sm" href="logout.php">
+                        <?= $lang['logout'] ?? 'Log Out' ?>
+                    </a>
                 </li>
             </ul>
         </div>
