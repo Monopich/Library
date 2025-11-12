@@ -91,10 +91,10 @@ if (strlen($_SESSION['login']) == 0) {
     <div class="help-container">
         <h1>📘 <?= $lang['help_main_title'] ?></h1>
 
-        <h2>1️⃣ <?= $lang['help_login_title'] ?></h2>
+        <h2>1 <?= $lang['help_login_title'] ?></h2>
         <p><?= $lang['help_login_text'] ?></p>
 
-        <h2>2️⃣ <?= $lang['help_dashboard_title'] ?></h2>
+        <h2>2 <?= $lang['help_dashboard_title'] ?></h2>
         <ul>
             <li><?= $lang['help_dashboard_books'] ?></li>
             <li><?= $lang['help_dashboard_ebooks'] ?></li>
@@ -102,19 +102,19 @@ if (strlen($_SESSION['login']) == 0) {
             <li><?= $lang['help_dashboard_issued'] ?></li>
         </ul>
 
-        <h2>3️⃣ <?= $lang['help_issued_books_title'] ?></h2>
+        <h2>3 <?= $lang['help_issued_books_title'] ?></h2>
         <ul>
             <li><?= $lang['help_issued_books_text'] ?></li>
         </ul>
 
-        <h2>4️⃣ <?= $lang['help_ebooks_title'] ?></h2>
+        <h2>4 <?= $lang['help_ebooks_title'] ?></h2>
         <ul>
             <li><?= $lang['help_ebooks_list'] ?></li>
             <li><?= $lang['help_ebooks_detail'] ?></li>
             <li><?= $lang['help_ebooks_download'] ?></li>
         </ul>
 
-        <h2>5️⃣ <?= $lang['help_profile_title'] ?></h2>
+        <h2>5 <?= $lang['help_profile_title'] ?></h2>
         <ul>
             <li><?= $lang['help_profile_view'] ?></li>
             <li><?= $lang['help_profile_password'] ?></li>
