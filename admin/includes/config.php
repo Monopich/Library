@@ -4,7 +4,7 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-if(!defined('DB_HOST')) define('DB_HOST', 'localhost');
+if(!defined('DB_HOST')) define('DB_HOST', 'library_db');
 if(!defined('DB_USER')) define('DB_USER', 'library_user');
 if(!defined('DB_PASS')) define('DB_PASS', 'Library123!');
 if(!defined('DB_NAME')) define('DB_NAME', 'library');
@@ -25,7 +25,7 @@ try {
 // 🌐 MULTI-LANGUAGE CONFIGURATION
 // ===============================
 
-// Default to English
+// Default to English if session not set
 if (!isset($_SESSION['lang'])) {
     $_SESSION['lang'] = 'en';
 }
@@ -35,19 +35,20 @@ if (isset($_GET['lang'])) {
     $selectedLang = $_GET['lang'] === 'kh' ? 'kh' : 'en';
     $_SESSION['lang'] = $selectedLang;
 
-    // Redirect to same page without query string
-    header("Location: " . strtok($_SERVER["REQUEST_URI"], '?'));
+    // Redirect to same page without query string to avoid duplicate GET
+    $redirectURL = strtok($_SERVER["REQUEST_URI"], '?');
+    header("Location: " . $redirectURL);
     exit;
 }
 
-// Load current page
-$currentPage = basename($_SERVER['PHP_SELF']);
+// Ensure the session language is always used
+$langCode = $_SESSION['lang'] ?? 'en';
 
 // Load language file
-$langDir = realpath(__DIR__ . '/../../languages') . '/'; // admin/includes/../../languages
-$langFile = $langDir . ($_SESSION['lang'] ?? 'en') . '.php';
+$langDir = __DIR__ . '/../languages/';
+$langFile = $langDir . $langCode . '.php';
 
-// Fallback to English if file not found
+// Fallback to English if file missing
 if (!file_exists($langFile)) {
     $langFile = $langDir . 'en.php';
 }
