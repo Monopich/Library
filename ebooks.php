@@ -35,7 +35,7 @@ body {
 .search-wrapper input {
     width: 100%;
     padding: 0.7rem 1rem 0.7rem 2.8rem;
-    border-radius: 30px;
+    border-radius: 4px;
     border: 1px solid #d0d7de;
     background-color: #fff;
     box-shadow: 0 2px 5px rgba(0,0,0,0.05);
@@ -96,7 +96,7 @@ body {
 /* Buttons */
 .btn-view, .btn-download {
     font-size: 0.9rem;
-    border-radius: 25px;
+    border-radius: 4px;
     padding: 0.4rem 1rem;
     transition: all 0.2s ease-in-out;
 }
@@ -120,7 +120,7 @@ body {
 
 <?php include('includes/header.php'); ?>
 
-<div class="content-wrapper py-4">
+<div class="content-wrapper py-3">
     <div class="container">
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
             <h2 class="fw-bold text-primary mb-0">

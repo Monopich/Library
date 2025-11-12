@@ -109,10 +109,10 @@ function valid() {
 <body>
 <?php include('includes/header.php'); ?>
 
-<div class="container mt-5">
+<div class="container mt-3">
     <div class="row justify-content-center">
         <div class="col-md-8 col-lg-6">
-            <h3 class="text-center header-line mb-4"><i class="bi bi-key-fill"></i> <?= $lang['change_password_title'] ?></h3>
+            <h2 class="text-center mb-4"><i class="bi bi-key-fill"></i> <?= $lang['change_password_title'] ?></h2>
 
             <?php if ($error): ?>
                 <div class="errorWrap"><strong><i class="bi bi-exclamation-triangle-fill"></i></strong> <?= htmlentities($error) ?></div>
