@@ -212,7 +212,7 @@ if (isset($_POST['login'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Library Management | Login</title>
+    <title><?= $lang['library_login'] ?></title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <style>
@@ -283,58 +283,57 @@ if (isset($_POST['login'])) {
             margin-top: 10px;
             display: block;
         }
+
+        .language-switch select {
+            font-weight: 500;
+            color: #1a3d7c;
+        }
+
+        .language-switch select:focus {
+            border-color: #1a3d7c;
+            box-shadow: 0 0 0 0.2rem rgba(26, 61, 124, 0.25);
+        }
+
     </style>
 </head>
 
 <body>
 
-    <div class="login-card">
-        <img src="assets/img/login-logo.png" alt="Library Logo" class="login-logo">
-        <h3 class="login-title">Library Login</h3>
+    <div class="login-card position-relative">
+        
 
-        <?php
-        // Show logout reason if provided
-        if (isset($_GET['reason'])) {
-            $reason = $_GET['reason'];
-            $messages = [
-                'logged_out' => 'You have been logged out from the main server.',
-                'main_logout' => 'You have been logged out from the main server.',
-                'account_switched' => 'Account has been switched. Please wait...',
-                'logged_in' => 'Authenticating with main server credentials...'
-            ];
-            $msg = $messages[$reason] ?? 'Please login to continue.';
-            echo '<div class="alert alert-info mb-3 text-start">' . htmlspecialchars($msg) . '</div>';
-        }
-        ?>
+        <img src="assets/img/login-logo.png" alt="Library Logo" class="login-logo">
+        <h3 class="login-title"><?= $lang['library_login'] ?></h3>
 
         <form method="post">
             <div class="mb-1 text-start">
-                <label for="emailid" class="form-label">Email or Admin Username</label>
+                <label for="emailid" class="form-label"><?= $lang['email_or_username'] ?></label>
                 <input type="text" class="form-control" name="emailid" id="emailid" required autocomplete="off">
             </div>
 
             <div class="mb-1 text-start">
-                <label for="password" class="form-label">Password</label>
+                <label for="password" class="form-label"><?= $lang['password'] ?></label>
                 <div class="input-group">
-                    <input type="password" class="form-control" name="password" id="password" required
-                        autocomplete="off">
+                    <input type="password" class="form-control" name="password" id="password" required autocomplete="off">
                     <button type="button" class="toggle-password" id="togglePassword"><i class="bi bi-eye"></i></button>
                 </div>
-                <a href="user-forgot-password.php" class="small-link">Forgot password?</a>
+                <a href="user-forgot-password.php" class="small-link"><?= $lang['forgot_password'] ?></a>
             </div>
 
-            <button type="submit" name="login" class="btn btn-primary mt-2">Login</button>
-            <span class="small-link mt-3">Don't have an account? <a href="signup.php">Register here</a></span>
+            <button type="submit" name="login" class="btn btn-primary mt-2"><?= $lang['login'] ?></button>
+            <span class="small-link mt-3"><?= $lang['no_account'] ?> <a href="signup.php"><?= $lang['register_here'] ?></a></span>
         </form>
-    </div>
 
-    <div class="position-fixed top-0 end-0 p-3" style="z-index:1055">
-        <div id="liveToast" class="toast align-items-center text-white border-0" role="alert">
-            <div class="d-flex">
-                <div class="toast-body" id="toast-message"></div>
-                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-            </div>
+        <!-- 🌐 Language Switcher -->
+        <div class="language-switch d-flex justify-content-center mt-3">
+            <form method="get" action="">
+                <select name="lang" onchange="this.form.submit()" class="form-select form-select-sm fw-bold text-primary" style="width: 160px; cursor: pointer;">
+                    <option value="en" <?= ($_SESSION['lang'] ?? 'en') === 'en' ? 'selected' : '' ?>>🇬🇧 English</option>
+                    <option value="kh" <?= ($_SESSION['lang'] ?? 'en') === 'kh' ? 'selected' : '' ?>>🇰🇭 ភាសាខ្មែរ</option>
+                </select>
+            </form>
         </div>
+
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
