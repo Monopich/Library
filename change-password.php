@@ -112,7 +112,7 @@ function valid() {
 <div class="container mt-3">
     <div class="row justify-content-center">
         <div class="col-md-8 col-lg-6">
-            <h2 class="text-center mb-4"><i class="bi bi-key-fill"></i> <?= $lang['change_password_title'] ?></h2>
+            <h2 class="text-center fw-bold text-primary  mb-4"><i class="bi bi-key-fill"></i> <?= $lang['change_password_title'] ?></h2>
 
             <?php if ($error): ?>
                 <div class="errorWrap"><strong><i class="bi bi-exclamation-triangle-fill"></i></strong> <?= htmlentities($error) ?></div>
