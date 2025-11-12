@@ -40,7 +40,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
         <div class="container">
             <div class="row mb-4">
                 <div class="col-12">
-                    <h4 class="fw-bold"><?= $lang['dashboard'] ?? ucfirst($role) . ' Dashboard' ?></h4>
+                    <h2 class="fw-bold"><?= $lang['dashboard'] ?? ucfirst($role) . ' Dashboard' ?></h2>
                 </div>
             </div>
 

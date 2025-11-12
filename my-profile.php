@@ -19,7 +19,9 @@ if (isset($_POST['update'])) {
     $email = $_POST['EmailId'];
     $mobile = $_POST['MobileNumber'];
 
-    $sql = "UPDATE tblstudents SET FullName=:fullname, EmailId=:email, MobileNumber=:mobile WHERE StudentId=:sid";
+    $sql = "UPDATE tblstudents 
+            SET FullName=:fullname, EmailId=:email, MobileNumber=:mobile 
+            WHERE StudentId=:sid";
     $query = $dbh->prepare($sql);
     $query->bindParam(':fullname', $fullname, PDO::PARAM_STR);
     $query->bindParam(':email', $email, PDO::PARAM_STR);
@@ -27,9 +29,9 @@ if (isset($_POST['update'])) {
     $query->bindParam(':sid', $sid, PDO::PARAM_STR);
 
     if ($query->execute()) {
-        $success = "Profile updated successfully!";
+        $success = $lang['profile_updated_success'];
     } else {
-        $error = "Something went wrong. Please try again.";
+        $error = $lang['profile_update_error'];
     }
 }
 
@@ -47,7 +49,7 @@ $student = $query->fetch(PDO::FETCH_OBJ);
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Student | My Profile</title>
+<title><?= $lang['student_profile_title'] ?></title>
 
 <!-- Bootstrap 5 CSS -->
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -55,8 +57,12 @@ $student = $query->fetch(PDO::FETCH_OBJ);
 
 <style>
 body { background-color: #f8f9fa; }
-.profile-card { max-width: 600px; margin: auto; margin-top: 50px; }
-.profile-card img { max-width: 150px; border-radius: 50%; }
+.profile-card { max-width: 600px; margin: auto; margin-top: 50px; border-radius: 15px; overflow: hidden; }
+.profile-card img { max-width: 140px; border-radius: 50%; border: 4px solid #007bff; }
+.card-header { background: linear-gradient(90deg, #007bff, #00b4d8); color: white; }
+.card-body label { font-weight: 600; }
+.btn-primary, .btn-success { border-radius: 30px; }
+.toast { border-radius: 12px; }
 </style>
 </head>
 <body>
@@ -65,14 +71,17 @@ body { background-color: #f8f9fa; }
 
 <div class="container">
     <div class="card shadow profile-card">
+        <div class="card-header text-center py-3">
+            <h4 class="fw-bold"><i class="bi bi-person-circle"></i> <?= $lang['my_profile'] ?></h4>
+        </div>
         <div class="card-body text-center">
             <img src="assets/img/user-avatar.png" alt="Profile Picture" class="mb-3">
             <h4 class="card-title"><?= htmlentities($student->FullName) ?></h4>
-            <p class="card-text"><strong>Student ID:</strong> <?= htmlentities($student->StudentId) ?></p>
-            <p class="card-text"><strong>Email:</strong> <?= htmlentities($student->EmailId) ?></p>
-            <p class="card-text"><strong>Mobile:</strong> <?= htmlentities($student->MobileNumber) ?></p>
-            <button class="btn btn-primary mt-3" data-bs-toggle="modal" data-bs-target="#editProfileModal">
-                <i class="bi bi-pencil-square"></i> Edit Profile
+            <p class="card-text mb-1"><strong><?= $lang['student_id'] ?>:</strong> <?= htmlentities($student->StudentId) ?></p>
+            <p class="card-text mb-1"><strong><?= $lang['email'] ?>:</strong> <?= htmlentities($student->EmailId) ?></p>
+            <p class="card-text mb-3"><strong><?= $lang['mobile'] ?>:</strong> <?= htmlentities($student->MobileNumber) ?></p>
+            <button class="btn btn-primary px-4 mt-2" data-bs-toggle="modal" data-bs-target="#editProfileModal">
+                <i class="bi bi-pencil-square"></i> <?= $lang['edit_profile'] ?>
             </button>
         </div>
     </div>
@@ -83,27 +92,27 @@ body { background-color: #f8f9fa; }
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
         <div class="modal-header bg-primary text-white">
-          <h5 class="modal-title" id="editProfileModalLabel">Edit Profile</h5>
+          <h5 class="modal-title" id="editProfileModalLabel"><?= $lang['edit_profile'] ?></h5>
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
         </div>
         <form method="POST" id="editProfileForm">
             <div class="modal-body">
                 <div class="mb-3">
-                    <label>Full Name</label>
+                    <label><?= $lang['full_name'] ?></label>
                     <input type="text" class="form-control" name="FullName" value="<?= htmlentities($student->FullName) ?>" required>
                 </div>
                 <div class="mb-3">
-                    <label>Email</label>
+                    <label><?= $lang['email'] ?></label>
                     <input type="email" class="form-control" name="EmailId" value="<?= htmlentities($student->EmailId) ?>" required>
                 </div>
                 <div class="mb-3">
-                    <label>Mobile</label>
+                    <label><?= $lang['mobile'] ?></label>
                     <input type="text" class="form-control" name="MobileNumber" value="<?= htmlentities($student->MobileNumber) ?>" required>
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="submit" name="update" class="btn btn-success">Save Changes</button>
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" name="update" class="btn btn-success"><?= $lang['save_changes'] ?></button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?= $lang['cancel'] ?></button>
             </div>
         </form>
     </div>
@@ -111,7 +120,7 @@ body { background-color: #f8f9fa; }
 </div>
 
 <!-- Toast -->
-<div class=" position-fixed top-0 end-0 p-3" style="z-index: 11">
+<div class="position-fixed top-0 end-0 p-3" style="z-index: 11">
   <div id="profileToast" class="toast align-items-center text-white bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
     <div class="d-flex">
       <div class="toast-body" id="toastMessage"></div>
