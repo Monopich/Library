@@ -57,11 +57,11 @@ $student = $query->fetch(PDO::FETCH_OBJ);
 
 <style>
 body { background-color: #f8f9fa; }
-.profile-card { max-width: 600px; margin: auto; border-radius: 15px; overflow: hidden; }
+.profile-card { max-width: 600px; margin: auto; margin-top: 20px; border-radius: 15px; overflow: hidden; }
 .profile-card img { max-width: 140px; border-radius: 50%; border: 4px solid #007bff; }
 .card-header { background: linear-gradient(90deg, #007bff, #00b4d8); color: white; }
 .card-body label { font-weight: 600; }
-.btn-primary, .btn-success { border-radius: 30px; }
+.btn-primary, .btn-success { border-radius: 4px; }
 .toast { border-radius: 12px; }
 </style>
 </head>
