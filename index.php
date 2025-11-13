@@ -85,6 +85,7 @@ function rtcAutoLogin($token, $dbh)
 
     } catch (Exception $e) {
         log_debug("⚠️ Auto-login failed: " . $e->getMessage());
+        $_SESSION['toast'] = ['type' => 'danger', 'message_key' => 'invalid_credentials'];
         return false;
     }
 }
@@ -120,7 +121,7 @@ if (!empty($_SESSION['login'])) {
         session_unset();
         session_destroy();
         session_start();
-        $_SESSION['toast'] = ['type' => 'info', 'message' => 'You have been logged out from the main server.'];
+        $_SESSION['toast'] = ['type' => 'info', 'message_key' => 'login_session_fail'];
     } else {
         // Valid session
         log_debug("Session valid, redirecting to dashboard.");
@@ -142,7 +143,7 @@ if (!empty($_GET['token']) || !empty($_POST['token'])) {
         header("Location: dashboard.php");
         exit;
     } else {
-        $_SESSION['toast'] = ['type' => 'danger', 'message' => 'Auto-login failed. Please login manually.'];
+        $_SESSION['toast'] = ['type' => 'danger', 'message_key' => 'invalid_credentials'];
         log_debug("Auto-login failed, showing manual login");
     }
 }
@@ -152,6 +153,12 @@ if (!empty($_GET['token']) || !empty($_POST['token'])) {
 if (isset($_POST['login'])) {
     $email = trim($_POST['emailid']);
     $password = $_POST['password'];
+
+    if (empty($email) || empty($password)) {
+        $_SESSION['toast'] = ['type' => 'warning', 'message_key' => 'enter_email_password'];
+        header("Location: index.php");
+        exit;
+    }
 
     // --- Admin login ---
     $sqlAdmin = "SELECT UserName, Password FROM admin WHERE UserName = :email";
@@ -166,10 +173,7 @@ if (isset($_POST['login'])) {
             header("Location: admin/dashboard.php");
             exit;
         } else {
-            $_SESSION['toast'] = [
-                'type' => 'danger',
-                'message' => 'Incorrect password for admin.'
-            ];
+            $_SESSION['toast'] = ['type' => 'danger', 'message_key' => 'admin_incorrect_password'];
             header("Location: index.php");
             exit;
         }
@@ -182,10 +186,7 @@ if (isset($_POST['login'])) {
     $student = $checkUser->fetch(PDO::FETCH_OBJ);
 
     if (!$student) {
-        $_SESSION['toast'] = [
-            'type' => 'danger',
-            'message' => 'Email does not exist. Please register first.'
-        ];
+        $_SESSION['toast'] = ['type' => 'danger', 'message_key' => 'email_not_found'];
         header("Location: index.php");
         exit;
     }
@@ -208,7 +209,7 @@ if (isset($_POST['login'])) {
     curl_close($ch);
 
     if ($error) {
-        $_SESSION['toast'] = ['type' => 'danger', 'message' => "Network error: $error"];
+        $_SESSION['toast'] = ['type' => 'danger', 'message_key' => 'network_error'];
         header("Location: index.php");
         exit;
     }
@@ -223,19 +224,13 @@ if (isset($_POST['login'])) {
             header("Location: dashboard.php");
             exit;
         } else {
-            $_SESSION['toast'] = [
-                'type' => 'danger',
-                'message' => 'Login successful but failed to start session.'
-            ];
+            $_SESSION['toast'] = ['type' => 'danger', 'message_key' => 'login_session_fail'];
             header("Location: index.php");
             exit;
         }
     } else {
         $msg = $result['message'] ?? "Incorrect password.";
-        $_SESSION['toast'] = [
-            'type' => 'danger',
-            'message' => $msg
-        ];
+        $_SESSION['toast'] = ['type' => 'danger', 'message_key' => 'invalid_credentials'];
         header("Location: index.php");
         exit;
     }
@@ -384,23 +379,29 @@ if (isset($_POST['login'])) {
 <script>
     <?php
     if (isset($_SESSION['toast'])) {
-        $toast = $_SESSION['toast'];
-        $bg = match ($toast['type']) {
-            'success' => 'bg-success',
-            'danger' => 'bg-danger',
-            'warning' => 'bg-warning text-dark',
-            'info' => 'bg-info text-dark',
-            default => 'bg-secondary',
-        };
-        echo "document.addEventListener('DOMContentLoaded',()=>{
-    const toastEl=document.getElementById('liveToast');
-    const toastBody=document.getElementById('toast-message');
-    toastEl.className='toast align-items-center border-0 $bg';
-    toastBody.textContent='{$toast['message']}';
-    new bootstrap.Toast(toastEl).show();
-});";
-        unset($_SESSION['toast']);
-    }
+    $toast = $_SESSION['toast'];
+    $bg = match ($toast['type']) {
+        'success' => 'bg-success',
+        'danger' => 'bg-danger',
+        'warning' => 'bg-warning text-dark',
+        'info' => 'bg-info text-dark',
+        default => 'bg-secondary',
+    };
+
+    // Translate message if a key exists in $lang
+    $msgKey = $toast['message_key'] ?? null; // optional: use 'message_key' instead of direct message
+    $message = $msgKey && isset($lang[$msgKey]) ? $lang[$msgKey] : ($toast['message'] ?? '');
+
+    echo "document.addEventListener('DOMContentLoaded',()=>{
+        const toastEl=document.getElementById('liveToast');
+        const toastBody=document.getElementById('toast-message');
+        toastEl.className='toast align-items-center border-0 $bg';
+        toastBody.textContent='".addslashes($message)."';
+        new bootstrap.Toast(toastEl).show();
+    });";
+
+    unset($_SESSION['toast']);
+}
     ?>
     document.getElementById('togglePassword').addEventListener('click', function () {
         const pw = document.getElementById('password');
