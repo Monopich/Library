@@ -313,6 +313,8 @@ return [
     'network_error' => 'មានកំហុសបណ្តាញ។',
     'login_session_fail' => 'ចូលដោយជោគជ័យ ប៉ុន្តែមិនអាចបង្កើតសម័យបាន។',
     'invalid_credentials' => 'អ៊ីមែល ឬ ពាក្យសម្ងាត់មិនត្រឹមត្រូវ។',
+    'admin_incorrect_password' => 'ពាក្យសម្ងាត់របស់អ្នកគ្រប់គ្រងមិនត្រឹមត្រូវ។',
+    'admin_invalid_username' => 'ឈ្មោះអ្នកប្រើគ្រប់គ្រងមិនមាន។',
 
     'password_recovery_title' => 'ផ្លាស់ប្តូរពាក្យសម្ងាត់ថ្មី',
     'email_label' => 'អ៊ីមែល',
