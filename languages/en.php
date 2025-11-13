@@ -314,6 +314,8 @@ return [
     'enter_email_password' => 'Please enter both email/username and password.',
     'email_not_exist' => 'Email does not exist.',
     'wrong_password' => 'Password is incorrect.',
+    'admin_incorrect_password' => 'Incorrect password for admin.',
+    'admin_invalid_username' => 'Admin username does not exist.',
 
     'password_recovery_title' => 'Password Recovery',
     'email_label' => 'Email',
