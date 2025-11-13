@@ -4,7 +4,7 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-if(!defined('DB_HOST')) define('DB_HOST', 'library_db');
+if(!defined('DB_HOST')) define('DB_HOST', 'localhost');
 if(!defined('DB_USER')) define('DB_USER', 'library_user');
 if(!defined('DB_PASS')) define('DB_PASS', 'Library123!');
 if(!defined('DB_NAME')) define('DB_NAME', 'library');
@@ -45,10 +45,10 @@ if (isset($_GET['lang'])) {
 $langCode = $_SESSION['lang'] ?? 'en';
 
 // Load language file
-$langDir = __DIR__ . '/../languages/';
+$langDir = realpath(__DIR__ . '/../../languages') . '/';
 $langFile = $langDir . $langCode . '.php';
 
-// Fallback to English if file missing
+// Fallback to English if missing
 if (!file_exists($langFile)) {
     $langFile = $langDir . 'en.php';
 }
