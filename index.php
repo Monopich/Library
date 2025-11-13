@@ -160,9 +160,33 @@ if (isset($_POST['login'])) {
     $query->execute();
     $admin = $query->fetch(PDO::FETCH_OBJ);
 
-    if ($admin && $admin->Password === md5($password)) {
-        $_SESSION['alogin'] = $email;
-        header("Location: admin/dashboard.php");
+    if ($admin) {
+        if ($admin->Password === md5($password)) {
+            $_SESSION['alogin'] = $email;
+            header("Location: admin/dashboard.php");
+            exit;
+        } else {
+            $_SESSION['toast'] = [
+                'type' => 'danger',
+                'message' => 'Incorrect password for admin.'
+            ];
+            header("Location: index.php");
+            exit;
+        }
+    }
+
+     // --- Student login via RTC API ---
+    $checkUser = $dbh->prepare("SELECT StudentId, FullName FROM tblstudents WHERE EmailId = :email");
+    $checkUser->bindParam(':email', $email);
+    $checkUser->execute();
+    $student = $checkUser->fetch(PDO::FETCH_OBJ);
+
+    if (!$student) {
+        $_SESSION['toast'] = [
+            'type' => 'danger',
+            'message' => 'Email does not exist. Please register first.'
+        ];
+        header("Location: index.php");
         exit;
     }
 
@@ -198,11 +222,22 @@ if (isset($_POST['login'])) {
         if (rtcAutoLogin($token, $dbh)) {
             header("Location: dashboard.php");
             exit;
+        } else {
+            $_SESSION['toast'] = [
+                'type' => 'danger',
+                'message' => 'Login successful but failed to start session.'
+            ];
+            header("Location: index.php");
+            exit;
         }
-        $_SESSION['toast'] = ['type' => 'danger', 'message' => 'Login successful but failed to start session.'];
     } else {
-        $msg = $result['message'] ?? "Login failed (HTTP $status)";
-        $_SESSION['toast'] = ['type' => 'danger', 'message' => $msg];
+        $msg = $result['message'] ?? "Incorrect password.";
+        $_SESSION['toast'] = [
+            'type' => 'danger',
+            'message' => $msg
+        ];
+        header("Location: index.php");
+        exit;
     }
 }
 ?>
@@ -236,7 +271,7 @@ if (isset($_POST['login'])) {
         }
 
         .login-logo {
-            width: 150px;
+            width: 250px;
             margin-bottom: 20px;
         }
 
@@ -299,152 +334,161 @@ if (isset($_POST['login'])) {
 
 <body>
 
-    <div class="login-card position-relative">
-        
+<div class="login-card position-relative">
+    
 
-        <img src="assets/img/login-logo.png" alt="Library Logo" class="login-logo">
-        <h3 class="login-title"><?= $lang['library_login'] ?></h3>
+    <img src="assets/img/login-logo.png" alt="Library Logo" class="login-logo">
+    <h3 class="login-title"><?= $lang['library_login'] ?></h3>
 
-        <form method="post">
-            <div class="mb-1 text-start">
-                <label for="emailid" class="form-label"><?= $lang['email_or_username'] ?></label>
-                <input type="text" class="form-control" name="emailid" id="emailid" required autocomplete="off">
-            </div>
-
-            <div class="mb-1 text-start">
-                <label for="password" class="form-label"><?= $lang['password'] ?></label>
-                <div class="input-group">
-                    <input type="password" class="form-control" name="password" id="password" required autocomplete="off">
-                    <button type="button" class="toggle-password" id="togglePassword"><i class="bi bi-eye"></i></button>
-                </div>
-                <a href="user-forgot-password.php" class="small-link"><?= $lang['forgot_password'] ?></a>
-            </div>
-
-            <button type="submit" name="login" class="btn btn-primary mt-2"><?= $lang['login'] ?></button>
-            <span class="small-link mt-3"><?= $lang['no_account'] ?> <a href="signup.php"><?= $lang['register_here'] ?></a></span>
-        </form>
-
-        <!-- 🌐 Language Switcher -->
-        <div class="language-switch d-flex justify-content-center mt-3">
-            <form method="get" action="">
-                <select name="lang" onchange="this.form.submit()" class="form-select form-select-sm fw-bold text-primary" style="width: 160px; cursor: pointer;">
-                    <option value="en" <?= ($_SESSION['lang'] ?? 'en') === 'en' ? 'selected' : '' ?>>🇬🇧 English</option>
-                    <option value="kh" <?= ($_SESSION['lang'] ?? 'en') === 'kh' ? 'selected' : '' ?>>🇰🇭 ភាសាខ្មែរ</option>
-                </select>
-            </form>
+    <form method="post">
+        <div class="mb-1 text-start">
+            <label for="emailid" class="form-label"><?= $lang['email_or_username'] ?></label>
+            <input type="text" class="form-control" name="emailid" id="emailid" required autocomplete="off">
         </div>
 
+        <div class="mb-1 text-start">
+            <label for="password" class="form-label"><?= $lang['password'] ?></label>
+            <div class="input-group">
+                <input type="password" class="form-control" name="password" id="password" required autocomplete="off">
+                <button type="button" class="toggle-password" id="togglePassword"><i class="bi bi-eye"></i></button>
+            </div>
+            <a href="user-forgot-password.php" class="small-link"><?= $lang['forgot_password'] ?></a>
+        </div>
+
+        <button type="submit" name="login" class="btn btn-primary mt-2"><?= $lang['login'] ?></button>
+        <span class="small-link mt-3"><?= $lang['no_account'] ?> <a href="signup.php"><?= $lang['register_here'] ?></a></span>
+    </form>
+
+    <!-- 🌐 Language Switcher -->
+    <div class="language-switch d-flex justify-content-center mt-3">
+        <form method="get" action="">
+            <select name="lang" onchange="this.form.submit()" class="form-select form-select-sm fw-bold text-primary" style="width: 160px; cursor: pointer;">
+                <option value="en" <?= ($_SESSION['lang'] ?? 'en') === 'en' ? 'selected' : '' ?>>🇬🇧 English</option>
+                <option value="kh" <?= ($_SESSION['lang'] ?? 'en') === 'kh' ? 'selected' : '' ?>>🇰🇭 ភាសាខ្មែរ</option>
+            </select>
+        </form>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        <?php
-        if (isset($_SESSION['toast'])) {
-            $toast = $_SESSION['toast'];
-            $bg = match ($toast['type']) {
-                'success' => 'bg-success',
-                'danger' => 'bg-danger',
-                'warning' => 'bg-warning text-dark',
-                'info' => 'bg-info text-dark',
-                default => 'bg-secondary',
-            };
-            echo "document.addEventListener('DOMContentLoaded',()=>{
-        const toastEl=document.getElementById('liveToast');
-        const toastBody=document.getElementById('toast-message');
-        toastEl.className='toast align-items-center border-0 $bg';
-        toastBody.textContent='{$toast['message']}';
-        new bootstrap.Toast(toastEl).show();
-    });";
-            unset($_SESSION['toast']);
+</div>
+
+<div class="position-fixed top-0 end-0 p-3" style="z-index:1055">
+  <div id="liveToast" class="toast align-items-center text-white border-0" role="alert">
+    <div class="d-flex">
+      <div class="toast-body" id="toast-message"></div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    <?php
+    if (isset($_SESSION['toast'])) {
+        $toast = $_SESSION['toast'];
+        $bg = match ($toast['type']) {
+            'success' => 'bg-success',
+            'danger' => 'bg-danger',
+            'warning' => 'bg-warning text-dark',
+            'info' => 'bg-info text-dark',
+            default => 'bg-secondary',
+        };
+        echo "document.addEventListener('DOMContentLoaded',()=>{
+    const toastEl=document.getElementById('liveToast');
+    const toastBody=document.getElementById('toast-message');
+    toastEl.className='toast align-items-center border-0 $bg';
+    toastBody.textContent='{$toast['message']}';
+    new bootstrap.Toast(toastEl).show();
+});";
+        unset($_SESSION['toast']);
+    }
+    ?>
+    document.getElementById('togglePassword').addEventListener('click', function () {
+        const pw = document.getElementById('password');
+        const icon = this.querySelector('i');
+        if (pw.type === 'password') {
+            pw.type = 'text';
+            icon.classList.replace('bi-eye', 'bi-eye-slash');
+        } else {
+            pw.type = 'password';
+            icon.classList.replace('bi-eye-slash', 'bi-eye');
         }
-        ?>
-        document.getElementById('togglePassword').addEventListener('click', function () {
-            const pw = document.getElementById('password');
-            const icon = this.querySelector('i');
-            if (pw.type === 'password') {
-                pw.type = 'text';
-                icon.classList.replace('bi-eye', 'bi-eye-slash');
-            } else {
-                pw.type = 'password';
-                icon.classList.replace('bi-eye-slash', 'bi-eye');
+    });
+
+    // ✅ Cross-domain auth synchronization for library subdomain
+    (function () {
+        'use strict';
+
+        console.log('🔄 Library Auth Sync initialized');
+
+        const CHECK_INTERVAL = 5000; // 5 seconds
+        const COOKIE_NAME = 'auth_token';
+
+        function getCookie(name) {
+            const nameEQ = name + "=";
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                let c = cookies[i];
+                while (c.charAt(0) === ' ') c = c.substring(1, c.length);
+                if (c.indexOf(nameEQ) === 0) {
+                    return c.substring(nameEQ.length, c.length);
+                }
+            }
+            return null;
+        }
+
+        let lastKnownToken = getCookie(COOKIE_NAME);
+        console.log('🔑 Initial token:', lastKnownToken ? lastKnownToken.substring(0, 20) + '...' : 'none');
+
+        function checkTokenSync() {
+            const currentToken = getCookie(COOKIE_NAME);
+
+            if (currentToken !== lastKnownToken) {
+                console.log('🔄 Token change detected!');
+                console.log('🔄 Old:', lastKnownToken ? lastKnownToken.substring(0, 20) + '...' : 'none');
+                console.log('🔄 New:', currentToken ? currentToken.substring(0, 20) + '...' : 'none');
+
+                if (!currentToken) {
+                    console.log('🚪 Main server logged out - redirecting...');
+                    window.location.href = 'index.php?reason=logged_out';
+                } else if (lastKnownToken && currentToken !== lastKnownToken) {
+                    console.log('🔄 Account switched - re-authenticating...');
+                    window.location.href = 'index.php?token=' + encodeURIComponent(currentToken) + '&reason=account_switched';
+                }
+
+                lastKnownToken = currentToken;
+            }
+        }
+
+        // Listen for storage events from main server
+        window.addEventListener('storage', function (event) {
+            if (event.key === 'auth_sync' && event.newValue) {
+                try {
+                    const authState = JSON.parse(event.newValue);
+                    console.log('🔄 Storage event from main:', authState.action);
+
+                    if (authState.action === 'logout') {
+                        console.log('🚪 Main logout detected - redirecting...');
+                        window.location.href = 'index.php?reason=main_logout';
+                    } else if (authState.action === 'login') {
+                        console.log('✅ Main login detected - checking token...');
+                        setTimeout(checkTokenSync, 1000);
+                    }
+                } catch (err) {
+                    console.error('Error processing storage event:', err);
+                }
             }
         });
 
-        // ✅ Cross-domain auth synchronization for library subdomain
-        (function () {
-            'use strict';
+        // Poll for changes
+        setInterval(checkTokenSync, CHECK_INTERVAL);
+        console.log('🔄 Token sync polling started (every 5s)');
 
-            console.log('🔄 Library Auth Sync initialized');
+        // Check on window focus
+        window.addEventListener('focus', checkTokenSync);
 
-            const CHECK_INTERVAL = 5000; // 5 seconds
-            const COOKIE_NAME = 'auth_token';
-
-            function getCookie(name) {
-                const nameEQ = name + "=";
-                const cookies = document.cookie.split(';');
-                for (let i = 0; i < cookies.length; i++) {
-                    let c = cookies[i];
-                    while (c.charAt(0) === ' ') c = c.substring(1, c.length);
-                    if (c.indexOf(nameEQ) === 0) {
-                        return c.substring(nameEQ.length, c.length);
-                    }
-                }
-                return null;
-            }
-
-            let lastKnownToken = getCookie(COOKIE_NAME);
-            console.log('🔑 Initial token:', lastKnownToken ? lastKnownToken.substring(0, 20) + '...' : 'none');
-
-            function checkTokenSync() {
-                const currentToken = getCookie(COOKIE_NAME);
-
-                if (currentToken !== lastKnownToken) {
-                    console.log('🔄 Token change detected!');
-                    console.log('🔄 Old:', lastKnownToken ? lastKnownToken.substring(0, 20) + '...' : 'none');
-                    console.log('🔄 New:', currentToken ? currentToken.substring(0, 20) + '...' : 'none');
-
-                    if (!currentToken) {
-                        console.log('🚪 Main server logged out - redirecting...');
-                        window.location.href = 'index.php?reason=logged_out';
-                    } else if (lastKnownToken && currentToken !== lastKnownToken) {
-                        console.log('🔄 Account switched - re-authenticating...');
-                        window.location.href = 'index.php?token=' + encodeURIComponent(currentToken) + '&reason=account_switched';
-                    }
-
-                    lastKnownToken = currentToken;
-                }
-            }
-
-            // Listen for storage events from main server
-            window.addEventListener('storage', function (event) {
-                if (event.key === 'auth_sync' && event.newValue) {
-                    try {
-                        const authState = JSON.parse(event.newValue);
-                        console.log('🔄 Storage event from main:', authState.action);
-
-                        if (authState.action === 'logout') {
-                            console.log('🚪 Main logout detected - redirecting...');
-                            window.location.href = 'index.php?reason=main_logout';
-                        } else if (authState.action === 'login') {
-                            console.log('✅ Main login detected - checking token...');
-                            setTimeout(checkTokenSync, 1000);
-                        }
-                    } catch (err) {
-                        console.error('Error processing storage event:', err);
-                    }
-                }
-            });
-
-            // Poll for changes
-            setInterval(checkTokenSync, CHECK_INTERVAL);
-            console.log('🔄 Token sync polling started (every 5s)');
-
-            // Check on window focus
-            window.addEventListener('focus', checkTokenSync);
-
-            console.log('✅ Library Auth Sync ready');
-        })();
-    </script>
+        console.log('✅ Library Auth Sync ready');
+    })();
+</script>
 </body>
 
 </html>

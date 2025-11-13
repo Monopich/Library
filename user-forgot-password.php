@@ -2,7 +2,7 @@
 session_start();
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
-include('includes/config.php');
+include('includes/config.php'); // this loads $lang[] based on ?lang= or session
 
 if (isset($_POST['change'])) {
     $email = trim($_POST['email']);
@@ -11,7 +11,7 @@ if (isset($_POST['change'])) {
     $confirmpassword = $_POST['confirmpassword'];
 
     if ($newpassword !== $confirmpassword) {
-        $_SESSION['toast'] = ['type' => 'warning', 'message' => 'New Password and Confirm Password do not match!'];
+        $_SESSION['toast'] = ['type' => 'warning', 'message' => $lang['password_not_match']];
     } else {
         $hashedPassword = md5($newpassword);
         $sql = "SELECT EmailId FROM tblstudents WHERE EmailId=:email AND MobileNumber=:mobile";
@@ -29,21 +29,20 @@ if (isset($_POST['change'])) {
             $chngpwd->bindParam(':newpassword', $hashedPassword, PDO::PARAM_STR);
             $chngpwd->execute();
 
-            $_SESSION['toast'] = ['type' => 'success', 'message' => 'Your password was successfully changed.'];
+            $_SESSION['toast'] = ['type' => 'success', 'message' => $lang['password_changed']];
             $_SESSION['redirect'] = 'index.php';
         } else {
-            $_SESSION['toast'] = ['type' => 'danger', 'message' => 'Email or mobile number is invalid.'];
+            $_SESSION['toast'] = ['type' => 'danger', 'message' => $lang['invalid_email_mobile']];
         }
     }
 }
 ?>
-
 <!DOCTYPE html>
-<html lang="en">
+<html lang="<?= ($_SESSION['lang'] ?? 'en') ?>">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Password Recovery | Library</title>
+<title><?= $lang['password_recovery_title'] ?> | Library</title>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
 <style>
@@ -98,47 +97,68 @@ body {
 .btn-primary:hover { background: #1a3d7c; }
 .small-link { font-size: 0.875rem; margin-top: 10px; display: block; }
 .login-logo {
-    width: 150px;
+    width: 250px;
     margin-bottom: 20px;
+}
+.language-switch select {
+    font-weight: 500;
+    color: #1a3d7c;
+}
+
+.language-switch select:focus {
+    border-color: #1a3d7c;
+    box-shadow: 0 0 0 0.2rem rgba(26, 61, 124, 0.25);
 }
 </style>
 </head>
 <body>
 
-<div class="recover-card">
+<div class="recover-card position-relative">
+    
+
     <img src="assets/img/login-logo.png" alt="Library Logo" class="login-logo">
-    <h3 class="recover-title">Password Recovery</h3>
+    <h3 class="recover-title"><?= $lang['password_recovery_title'] ?></h3>
 
     <form method="post">
         <div class="mb-1 text-start">
-            <label class="form-label">Email</label>
+            <label class="form-label"><?= $lang['email_label'] ?></label>
             <input type="email" class="form-control" name="email" required autocomplete="off">
         </div>
         <div class="mb-1 text-start">
-            <label class="form-label">Mobile Number</label>
+            <label class="form-label"><?= $lang['mobile_label'] ?></label>
             <input type="text" class="form-control" name="mobile" required autocomplete="off">
         </div>
         <div class="mb-1 text-start">
-            <label class="form-label">New Password</label>
+            <label class="form-label"><?= $lang['new_password_label'] ?></label>
             <div class="input-group">
                 <input type="password" class="form-control" name="newpassword" id="newpassword" required autocomplete="off">
                 <button type="button" class="toggle-password" data-target="newpassword"><i class="bi bi-eye"></i></button>
             </div>
         </div>
         <div class="mb-1 text-start">
-            <label class="form-label">Confirm Password</label>
+            <label class="form-label"><?= $lang['confirm_password_label'] ?></label>
             <div class="input-group">
                 <input type="password" class="form-control" name="confirmpassword" id="confirmpassword" required autocomplete="off">
                 <button type="button" class="toggle-password" data-target="confirmpassword"><i class="bi bi-eye"></i></button>
             </div>
         </div>
-        <button type="submit" name="change" class="btn btn-primary mt-3">Change Password</button>
+        <button type="submit" name="change" class="btn btn-primary mt-3"><?= $lang['change_password_button'] ?></button>
         <div class="small-link mt-3">
-            <span>Remembered your password? <a href="index.php">Login here</a></span>
+            <span><?= $lang['remember_password'] ?> <a href="index.php"><?= $lang['login_here'] ?></a></span>
         </div>
     </form>
+    
+    <div class="language-switch d-flex justify-content-center mt-3">
+            <form method="get" action="">
+                <select name="lang" onchange="this.form.submit()" class="form-select form-select-sm fw-bold text-primary" style="width: 160px; cursor: pointer;">
+                    <option value="en" <?= ($_SESSION['lang'] ?? 'en') === 'en' ? 'selected' : '' ?>>🇬🇧 English</option>
+                    <option value="kh" <?= ($_SESSION['lang'] ?? 'en') === 'kh' ? 'selected' : '' ?>>🇰🇭 ភាសាខ្មែរ</option>
+                </select>
+            </form>
+        </div>
 </div>
 
+<!-- Toast -->
 <div class="position-fixed top-0 end-0 p-3" style="z-index: 1055">
   <div id="liveToast" class="toast align-items-center text-white border-0" role="alert">
     <div class="d-flex">
@@ -183,12 +203,10 @@ document.querySelectorAll('.toggle-password').forEach(button => {
         const icon = this.querySelector('i');
         if(target.type === 'password'){
             target.type = 'text';
-            icon.classList.remove('bi-eye');
-            icon.classList.add('bi-eye-slash');
+            icon.classList.replace('bi-eye', 'bi-eye-slash');
         } else {
             target.type = 'password';
-            icon.classList.remove('bi-eye-slash');
-            icon.classList.add('bi-eye');
+            icon.classList.replace('bi-eye-slash', 'bi-eye');
         }
     });
 });

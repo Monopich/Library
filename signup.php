@@ -20,7 +20,7 @@ if (isset($_POST['signup'])) {
     $status = 1;
 
     if ($password !== $confirmpassword) {
-        $_SESSION['toast'] = ['type' => 'warning', 'message' => 'Password and Confirm Password do not match!'];
+        $_SESSION['toast'] = ['type' => 'warning', 'message' => $lang['password_mismatch']];
     } else {
         $hashedPassword = password_hash($password, PASSWORD_BCRYPT);
         $sql = "INSERT INTO tblstudents(StudentId, FullName, MobileNumber, EmailId, Password, Status) 
@@ -35,20 +35,21 @@ if (isset($_POST['signup'])) {
         $query->execute();
 
         if ($dbh->lastInsertId()) {
-            $_SESSION['toast'] = ['type' => 'success', 'message' => "Registration successful! Your Student ID is $StudentId"];
+            $_SESSION['toast'] = ['type' => 'success', 'message' => $lang['registration_success'] . " $StudentId"];
             $_SESSION['redirect'] = 'index.php';
         } else {
-            $_SESSION['toast'] = ['type' => 'danger', 'message' => 'Something went wrong. Please try again.'];
+            $_SESSION['toast'] = ['type' => 'danger', 'message' => $lang['registration_failed']];
         }
     }
 }
 ?>
+
 <!DOCTYPE html>
-<html lang="en">
+<html lang="<?= $_SESSION['lang'] ?? 'en' ?>">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Library Management | Signup</title>
+<title><?= $lang['signup_title'] ?> | Library</title>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
 <style>
@@ -94,15 +95,24 @@ body {
     padding: 0;
     margin: 0;
 }
-.btn-success {
+.btn-primary {
     width: 100%;
     border-radius: 8px;
     padding: 10px;
     font-weight: 500;
 }
-.btn-success:hover { background: #218838; }
+.btn-primary:hover { background: #1a3d7c; }
 .small-link { font-size: 0.875rem; margin-top: 10px; display: block; }
-.login-logo { width: 150px; margin-bottom: 20px; }
+.login-logo { width: 250px; margin-bottom: 20px; }
+.language-switch select {
+            font-weight: 500;
+            color: #1a3d7c;
+        }
+
+        .language-switch select:focus {
+            border-color: #1a3d7c;
+            box-shadow: 0 0 0 0.2rem rgba(26, 61, 124, 0.25);
+        }
 </style>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
@@ -124,40 +134,49 @@ function checkAvailability() {
 
 <div class="card-signup">
     <img src="assets/img/login-logo.png" alt="Library Logo" class="login-logo">
-    <h3 class="card-title">Student Signup</h3>
+    <h3 class="card-title"><?= $lang['signup_title'] ?></h3>
     <form name="signup" method="post">
         <div class="mb-1 text-start">
-            <label for="fullname" class="form-label">Full Name</label>
+            <label for="fullname" class="form-label"><?= $lang['fullname'] ?></label>
             <input class="form-control" type="text" name="fullname" id="fullname" autocomplete="off" required>
         </div>
         <div class="mb-1 text-start">
-            <label for="mobileno" class="form-label">Mobile Number</label>
+            <label for="mobileno" class="form-label"><?= $lang['mobile_number'] ?></label>
             <input class="form-control" type="text" name="mobileno" id="mobileno" maxlength="10" autocomplete="off" required>
         </div>
         <div class="mb-1 text-start">
-            <label for="emailid" class="form-label">Email</label>
+            <label for="emailid" class="form-label"><?= $lang['email'] ?></label>
             <input class="form-control" type="email" name="email" id="emailid" onBlur="checkAvailability()" autocomplete="off" required>
             <span id="user-availability-status" style="font-size:12px;"></span>
         </div>
         <div class="mb-1 text-start">
-            <label class="form-label">Password</label>
+            <label class="form-label"><?= $lang['password'] ?></label>
             <div class="input-group">
                 <input class="form-control" type="password" name="password" id="password" autocomplete="off" required>
                 <button type="button" class="toggle-password" data-target="password"><i class="bi bi-eye"></i></button>
             </div>
         </div>
         <div class="mb-1 text-start">
-            <label class="form-label">Confirm Password</label>
+            <label class="form-label"><?= $lang['confirm_password'] ?></label>
             <div class="input-group">
                 <input class="form-control" type="password" name="confirmpassword" id="confirmpassword" autocomplete="off" required>
                 <button type="button" class="toggle-password" data-target="confirmpassword"><i class="bi bi-eye"></i></button>
             </div>
         </div>
-        <button type="submit" name="signup" class="btn btn-success mt-3">Register Now</button>
+        <button type="submit" name="signup" class="btn btn-primary mt-3"><?= $lang['register_now'] ?></button>
         <div class="small-link mt-3">
-            <a href="index.php">Back to Login</a>
+            <a href="index.php"><?= $lang['back_to_login'] ?></a>
         </div>
     </form>
+
+    <div class="language-switch d-flex justify-content-center mt-3">
+            <form method="get" action="">
+                <select name="lang" onchange="this.form.submit()" class="form-select form-select-sm fw-bold text-primary" style="width: 160px; cursor: pointer;">
+                    <option value="en" <?= ($_SESSION['lang'] ?? 'en') === 'en' ? 'selected' : '' ?>>🇬🇧 English</option>
+                    <option value="kh" <?= ($_SESSION['lang'] ?? 'en') === 'kh' ? 'selected' : '' ?>>🇰🇭 ភាសាខ្មែរ</option>
+                </select>
+            </form>
+        </div>
 </div>
 
 <!-- Toast -->
@@ -172,7 +191,6 @@ function checkAvailability() {
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-// Show toast
 <?php
 if (isset($_SESSION['toast'])) {
     $toast = $_SESSION['toast'];
@@ -197,7 +215,6 @@ if (isset($_SESSION['toast'])) {
     unset($_SESSION['toast'], $_SESSION['redirect']);
 }
 ?>
-
 // Toggle password visibility
 document.querySelectorAll('.toggle-password').forEach(button => {
     button.addEventListener('click', function(){
@@ -216,3 +233,4 @@ document.querySelectorAll('.toggle-password').forEach(button => {
 });
 </script>
 </body>
+</html>
