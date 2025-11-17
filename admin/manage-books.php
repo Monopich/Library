@@ -127,17 +127,7 @@ body { background-color: #f8f9fa; }
 .toast-container { z-index: 1100; }
 .table thead th { background-color: #007bff; color: #fff; }
 .table tbody td { vertical-align: middle; text-align: center; }
-.table { table-layout: fixed; width: 100%; }
 .table img { width: 100%; height: auto; object-fit: cover; }
-.table th:nth-child(1) { width: 5%; }
-.table th:nth-child(2) { width: 10%; }
-.table th:nth-child(3) { width: 20%; }
-.table th:nth-child(4) { width: 10%; }
-.table th:nth-child(5) { width: 10%; }
-.table th:nth-child(6) { width: 10%; }
-.table th:nth-child(7) { width: 10%; }
-.table th:nth-child(8) { width: 10%; }
-.table th:nth-child(9) { width: 15%; }
 .dataTables_wrapper .dataTables_filter, .dataTables_wrapper .dataTables_info {
     position: sticky; top: 0; background: white; z-index: 10; padding: 10px;
 }
