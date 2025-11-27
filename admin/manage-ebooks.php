@@ -240,7 +240,7 @@ foreach ($results as $result):
 ?>
 <tr>
     <td><?php echo htmlentities($cnt); ?></td>
-    <td><img src="bookimg/<?php echo htmlentities($result->bookImage); ?>" width="50" height="70"></td>
+    <td><img src="bookimg/<?php echo htmlentities($result->bookImage); ?>" width="100"></td>
     <td class="text-start"><?php echo htmlentities($result->BookName); ?></td>
     <td><?php echo htmlentities($result->CategoryName); ?></td>
     <td><?php echo htmlentities($result->AuthorName); ?></td>
