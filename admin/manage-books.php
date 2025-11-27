@@ -127,7 +127,7 @@ body { background-color: #f8f9fa; }
 .toast-container { z-index: 1100; }
 .table thead th { background-color: #007bff; color: #fff; }
 .table tbody td { vertical-align: middle; text-align: center; }
-.table img { width: 100%; height: auto; object-fit: cover; }
+.table img { width: 100px; height: auto; object-fit: cover; }
 .dataTables_wrapper .dataTables_filter, .dataTables_wrapper .dataTables_info {
     position: sticky; top: 0; background: white; z-index: 10; padding: 10px;
 }
